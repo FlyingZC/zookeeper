@@ -31,7 +31,7 @@ import javax.management.ObjectName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 此类提供了一个统一的接口，用于使用平台MBean服务器注册/取消注册zookeeper MBean。它构建了MBean的层次结构，其中每个MBean由类似文件系统的路径表示。最终，此层次结构将作为虚拟数据树存储在zookeeper数据树实例中
  * This class provides a unified interface for registering/unregistering of
  * zookeeper MBeans with the platform MBean server. It builds a hierarchy of MBeans
  * where each MBean represented by a filesystem-like path. Eventually, this hierarchy

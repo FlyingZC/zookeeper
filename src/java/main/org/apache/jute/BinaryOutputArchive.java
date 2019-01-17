@@ -67,38 +67,38 @@ public class BinaryOutputArchive implements OutputArchive {
         out.writeDouble(d);
     }
     
-    /**
+    /** 将String类型转化为ByteBuffer类型
      * create our own char encoder to utf8. This is faster 
      * then string.getbytes(UTF8).
      * @param s the string to encode into utf8
      * @return utf8 byte sequence.
      */
     final private ByteBuffer stringToByteBuffer(CharSequence s) {
-        bb.clear();
+        bb.clear();// 清空ByteBuffer
         final int len = s.length();
         for (int i = 0; i < len; i++) {
-            if (bb.remaining() < 3) {
-                ByteBuffer n = ByteBuffer.allocate(bb.capacity() << 1);
-                bb.flip();
-                n.put(bb);
+            if (bb.remaining() < 3) {// ByteBuffer剩余大小 小于3
+                ByteBuffer n = ByteBuffer.allocate(bb.capacity() << 1);// 再进行一次分配(扩大一倍)
+                bb.flip();// 切换方式
+                n.put(bb);  // 写入bb
                 bb = n;
             }
             char c = s.charAt(i);
-            if (c < 0x80) {
+            if (c < 0x80) {// 小于128，直接写入
                 bb.put((byte) c);
-            } else if (c < 0x800) {
+            } else if (c < 0x800) {// 小于2048，则进行相应处理
                 bb.put((byte) (0xc0 | (c >> 6)));
                 bb.put((byte) (0x80 | (c & 0x3f)));
-            } else {
+            } else {// 大于2048，则进行相应处理
                 bb.put((byte) (0xe0 | (c >> 12)));
                 bb.put((byte) (0x80 | ((c >> 6) & 0x3f)));
                 bb.put((byte) (0x80 | (c & 0x3f)));
             }
         }
-        bb.flip();
+        bb.flip();// 切换方式
         return bb;
     }
-
+    // 写String类型
     public void writeString(String s, String tag) throws IOException {
         if (s == null) {
             writeInt(-1, "len");

@@ -876,18 +876,18 @@ public class DataTree {
         return rc;
     }
 
-    void killSession(long session, long zxid) {
+    void killSession(long session, long zxid) {// 先移除session，然后取得该session下的所有临时节点，然后逐一删除临时节点
         // the list is already removed from the ephemerals
         // so we do not have to worry about synchronizing on
         // the list. This is only called from FinalRequestProcessor
         // so there is no need for synchronization. The list is not
         // changed here. Only create and delete change the list which
         // are again called from FinalRequestProcessor in sequence.
-        HashSet<String> list = ephemerals.remove(session);
+        HashSet<String> list = ephemerals.remove(session); // 移除session，并获取该session对应的所有临时节点
         if (list != null) {
-            for (String path : list) {
+            for (String path : list) {// 遍历所有临时节点
                 try {
-                    deleteNode(path, zxid);
+                    deleteNode(path, zxid);// 删除路径对应的节点
                     if (LOG.isDebugEnabled()) {
                         LOG
                                 .debug("Deleting ephemeral node " + path

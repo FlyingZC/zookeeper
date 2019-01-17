@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 提供服务端列表,客户端连接时会根据一定算法从列表中随机选择特定服务端连接
  * Most simple HostProvider, resolves on every next() call.
  *
  * Please be aware that although this class doesn't do any DNS caching, there're multiple levels of caching already

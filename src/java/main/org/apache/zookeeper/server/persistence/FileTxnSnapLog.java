@@ -40,7 +40,7 @@ import org.apache.zookeeper.txn.TxnHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 封装了TxnLog和SnapShot的辅助类
  * This is a helper class 
  * above the implementations 
  * of txnlog and snapshot 
@@ -48,19 +48,19 @@ import org.slf4j.LoggerFactory;
  */
 public class FileTxnSnapLog {
     //the direcotry containing the 
-    //the transaction logs
+    //the transaction logs 日志文件目录
     private final File dataDir;
     //the directory containing the
-    //the snapshot directory
+    //the snapshot directory 快照文件目录
     private final File snapDir;
-    private TxnLog txnLog;
-    private SnapShot snapLog;
-    public final static int VERSION = 2;
+    private TxnLog txnLog;// 事务日志
+    private SnapShot snapLog;// 快照
+    public final static int VERSION = 2;// 版本号
     public final static String version = "version-";
     
     private static final Logger LOG = LoggerFactory.getLogger(FileTxnSnapLog.class);
     
-    /**
+    /** 接收事务应用过程中的回调，在Zookeeper数据恢复后期，会有事务修正过程，此过程会回调PlayBackListener来进行对应的数据修正
      * This listener helps
      * the external apis calling
      * restore to gather information
@@ -79,7 +79,7 @@ public class FileTxnSnapLog {
      */
     public FileTxnSnapLog(File dataDir, File snapDir) throws IOException {
         LOG.debug("Opening datadir:{} snapDir:{}", dataDir, snapDir);
-
+        // 在datadir和snapdir下生成version-2目录
         this.dataDir = new File(dataDir, version + VERSION);
         this.snapDir = new File(snapDir, version + VERSION);
         if (!this.dataDir.exists()) {
@@ -108,7 +108,7 @@ public class FileTxnSnapLog {
             checkLogDir();
             checkSnapDir();
         }
-
+        // 创建txnLog和snapLog对象
         txnLog = new FileTxnLog(this.dataDir);
         snapLog = new FileSnap(this.snapDir);
     }
@@ -159,7 +159,7 @@ public class FileTxnSnapLog {
         return this.snapDir;
     }
     
-    /**
+    /** 恢复datatree和sessions,从快照 和 事务日志 中读取后 还原服务器数据库
      * this function restores the server 
      * database after reading from the 
      * snapshots and transaction logs
@@ -172,7 +172,7 @@ public class FileTxnSnapLog {
      */
     public long restore(DataTree dt, Map<Long, Integer> sessions, 
             PlayBackListener listener) throws IOException {
-        snapLog.deserialize(dt, sessions);
+        snapLog.deserialize(dt, sessions);// 从最后一个有效快照 反序列化 数据树，并返回反序列化的最后一个zxid
         return fastForwardFromEdits(dt, sessions, listener);
     }
 

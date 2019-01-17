@@ -633,16 +633,16 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     @Override
     public synchronized void start() {
         loadDataBase();
-        cnxnFactory.start();        
-        startLeaderElection();
-        super.start();
+        cnxnFactory.start();// 启动cnxnFactory，这里主要是启动一个server，用来接收来自client的请求，绑定在配置文件中的clientPort端口        
+        startLeaderElection();// 启动leader选举过程，因为server刚启动时是存在LOOKING状态，需要发一起一次选举过程来获取leader
+        super.start();// 该类继承自ZooKeeperThread. 启动QuorumPeer线程
     }
 
     private void loadDataBase() {
         File updating = new File(getTxnFactory().getSnapDir(),
                                  UPDATING_EPOCH_FILENAME);
 		try {
-            zkDb.loadDataBase();
+            zkDb.loadDataBase();// 启动时先从磁盘->内存数据库中恢复数据
 
             // load the epochs
             long lastProcessedZxid = zkDb.getDataTree().lastProcessedZxid;
@@ -701,8 +701,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         responder.interrupt();
     }
     synchronized public void startLeaderElection() {
-    	try {
-    		currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
+    	try {// server刚启动的时候，server的状态初始化为LOOKING状态
+    		currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());// 创建Vote对象(myid, zxid, epoch时钟)
     	} catch(IOException e) {
     		RuntimeException re = new RuntimeException(e.getMessage());
     		re.setStackTrace(e.getStackTrace());
@@ -726,7 +726,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 throw new RuntimeException(e);
             }
         }
-        this.electionAlg = createElectionAlgorithm(electionType);
+        this.electionAlg = createElectionAlgorithm(electionType);// 创建选举算法
     }
     
     /**
@@ -775,7 +775,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 quorumConfig);
     }
     
-    /**
+    /** 返回此主机能看到的最高的zxid
      * returns the highest zxid that this host has seen
      * 
      * @return the highest zxid for this host
@@ -821,10 +821,10 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             le = new AuthFastLeaderElection(this, true);
             break;
         case 3:
-            qcm = createCnxnManager();
+            qcm = createCnxnManager();// 初始化QuorumCnxManager,管理选举中和其他server的交互,选举时监听在专门的electionAddr(端口)上
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
-                listener.start();
+                listener.start();//  启动Listener线程.绑定地址开启ServerSocket服务，用来侦听其他server连接，进行集体间选举，投票， 数据同步。Server链接数有限，是基于bio的长连接。
                 le = new FastLeaderElection(this, qcm);
             } else {
                 LOG.error("Null listener when initializing cnx manager");
@@ -866,6 +866,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         return null;
     }
 
+	/** 用来进行选举，以及选举后进入各角色，角色被打破重新再进行选举*/
     @Override
     public void run() {
         setName("QuorumPeer" + "[myid=" + getId() + "]" +
@@ -875,7 +876,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         try {
             jmxQuorumBean = new QuorumBean(this);
             MBeanRegistry.getInstance().register(jmxQuorumBean, null);
-            for(QuorumServer s: getView().values()){
+            for(QuorumServer s: getView().values()){// view例如多个zk
                 ZKMBeanInfo p;
                 if (getId() == s.id) {
                     p = jmxLocalPeerBean = new LocalPeerBean(this);
@@ -908,7 +909,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 case LOOKING:
                     LOG.info("LOOKING");
 
-                    if (Boolean.getBoolean("readonlymode.enabled")) {
+                    if (Boolean.getBoolean("readonlymode.enabled")) {// 默认不走这里
                         LOG.info("Attempting to start ReadOnlyZooKeeperServer");
 
                         // Create read-only server but don't start it immediately
@@ -941,7 +942,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                         try {
                             roZkMgr.start();
                             setBCVote(null);
-                            setCurrentVote(makeLEStrategy().lookForLeader());
+                            setCurrentVote(makeLEStrategy().lookForLeader());// 投票给自己
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception",e);
                             setPeerState(ServerState.LOOKING);
@@ -951,10 +952,10 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                             roZkMgr.interrupt();
                             roZk.shutdown();
                         }
-                    } else {
+                    } else {// 默认走这
                         try {
                             setBCVote(null);
-                            setCurrentVote(makeLEStrategy().lookForLeader());
+                            setCurrentVote(makeLEStrategy().lookForLeader());// 进行选举,并设置投票. 选举策略,默认为FastLeaderElection.
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);
                             setPeerState(ServerState.LOOKING);
@@ -1406,7 +1407,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             }
         }
     }
-
+    /** 获取第几轮选举*/
     public long getCurrentEpoch() throws IOException {
 		if (currentEpoch == -1) {
 			currentEpoch = readLongFromFile(CURRENT_EPOCH_FILENAME);

@@ -101,21 +101,21 @@ public class QuorumPeerMain {
     {
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
-            config.parse(args[0]);
+            config.parse(args[0]);// 1.通过QuorumPeerConfig.parse(),解析配置文件
         }
 
-        // Start and schedule the the purge task
+        // Start and schedule the the purge task.2.启动定时清理服务任务,DatadirCleanupManager.start()用来清除过期的txtLog和snapshot文件
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(config
                 .getDataDir(), config.getDataLogDir(), config
                 .getSnapRetainCount(), config.getPurgeInterval());
         purgeMgr.start();
 
-        if (args.length == 1 && config.servers.size() > 0) {
-            runFromConfig(config);
+        if (args.length == 1 && config.servers.size() > 0) {// 分布式的
+            runFromConfig(config);// 3.runFromConfig()-集群模式 或ZooKeeperServerMain.main()-单机模式 来启动zookeeper
         } else {
             LOG.warn("Either no config or no quorum defined in config, running "
                     + " in standalone mode");
-            // there is only server in the quorum -- run as standalone
+            // there is only server in the quorum -- run as standalone.单机
             ZooKeeperServerMain.main(args);
         }
     }
@@ -133,7 +133,7 @@ public class QuorumPeerMain {
           cnxnFactory.configure(config.getClientPortAddress(),
                                 config.getMaxClientCnxns());
 
-          quorumPeer = getQuorumPeer();
+          quorumPeer = getQuorumPeer();// 构建QuorumPeer任务对象
 
           quorumPeer.setQuorumPeers(config.getServers());
           quorumPeer.setTxnFactory(new FileTxnSnapLog(
@@ -166,7 +166,7 @@ public class QuorumPeerMain {
 
           quorumPeer.setQuorumCnxnThreadsSize(config.quorumCnxnThreadsSize);
           quorumPeer.initialize();
-
+          // 启动auorumPeer
           quorumPeer.start();
           quorumPeer.join();
       } catch (InterruptedException e) {

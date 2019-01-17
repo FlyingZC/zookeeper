@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.*;
 
-/**
+/** Zookeeper客户端的实现类,使用Zookeeper都是通过这个类来发送命令给Zookeeper服务器的
  * This is the main class of ZooKeeper client library. To use a ZooKeeper
  * service, an application must first instantiate an object of ZooKeeper class.
  * All the iterations will be done by calling the methods of ZooKeeper class.
@@ -712,7 +712,7 @@ public class ZooKeeper {
         }
     }
 
-    /**
+    /** 客户端调用create方法在Zookeeper集群创建一个Node
      * Create a node with the given path. The node data will be the given data,
      * and node acl will be the given acl.
      * <p>
@@ -778,7 +778,7 @@ public class ZooKeeper {
 
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.create);
-        CreateRequest request = new CreateRequest();
+        CreateRequest request = new CreateRequest();// 根据入参创建request
         CreateResponse response = new CreateResponse();
         request.setData(data);
         request.setFlags(createMode.toFlag());
@@ -787,7 +787,7 @@ public class ZooKeeper {
             throw new KeeperException.InvalidACLException();
         }
         request.setAcl(acl);
-        ReplyHeader r = cnxn.submitRequest(h, request, response, null);
+        ReplyHeader r = cnxn.submitRequest(h, request, response, null);// 将发送包放入队列,等待发送线程发送给服务端
         if (r.getErr() != 0) {
             throw KeeperException.create(KeeperException.Code.get(r.getErr()),
                     clientPath);
@@ -826,7 +826,7 @@ public class ZooKeeper {
                 serverPath, ctx, null);
     }
 
-    /**
+    /** 删除节点的操作
      * Delete the node with the given path. The call will succeed if such a node
      * exists, and the given version matches the node's version (if the given
      * version is -1, it matches any node's versions).
@@ -1139,7 +1139,7 @@ public class ZooKeeper {
         return exists(path, watch ? watchManager.defaultWatcher : null);
     }
 
-    /**
+    /** 判断节点是否存在，异步方式，并且在回调函数中触发事件观察者
      * The asynchronous version of exists.
      *
      * @see #exists(String, Watcher)
@@ -1279,7 +1279,7 @@ public class ZooKeeper {
                 clientPath, serverPath, ctx, wcb);
     }
 
-    /**
+    /** 获取节点关联数据
      * The asynchronous version of getData.
      *
      * @see #getData(String, boolean, Stat)
@@ -1288,7 +1288,7 @@ public class ZooKeeper {
         getData(path, watch ? watchManager.defaultWatcher : null, cb, ctx);
     }
 
-    /**
+    /** 设置节点关联数据
      * Set the data for the node of the given path if such a node exists and the
      * given version matches the version of the node (if the given version is
      * -1, it matches any node's versions). Return the stat of the node.
@@ -1544,7 +1544,7 @@ public class ZooKeeper {
         return response.getChildren();
     }
 
-    /**
+    /** 获取子节点路径列表
      * Return the list of the children of the node of the given path.
      * <p>
      * If the watch is true and the call is successful (no exception is thrown),

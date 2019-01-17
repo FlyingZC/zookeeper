@@ -22,14 +22,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 
-/**
+/** 所有用于网络传输 或者 本地存储 的类型都实现该接口
  * Interface that is implemented by generated classes.
  * 
  */
 @InterfaceAudience.Public
 public interface Record {
     public void serialize(OutputArchive archive, String tag)
-        throws IOException;
+        throws IOException;// 序列化
     public void deserialize(InputArchive archive, String tag)
-        throws IOException;
+        throws IOException;// 反序列化
 }

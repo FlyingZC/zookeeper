@@ -207,7 +207,7 @@ public class ZKDatabase {
         }
     };
 
-    /**
+    /** 将数据库 从磁盘 加载到 内存中,并将事务添加到内存中的committedlog
      * load the database from the disk onto memory and also add 
      * the transactions to the committedlog in memory.
      * @return the last valid zxid on disk

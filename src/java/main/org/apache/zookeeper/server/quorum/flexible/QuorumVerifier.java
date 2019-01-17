@@ -20,7 +20,7 @@ package org.apache.zookeeper.server.quorum.flexible;
 
 import java.util.Set;
 
-/**
+/** 所有quorum验证程序都必须实现 containsQuorum() 方法，该方法 验证 服务器标识符 的 HashSet是否构成quorum
  * All quorum validators have to implement a method called
  * containsQuorum, which verifies if a Set of server 
  * identifiers constitutes a quorum.
@@ -28,6 +28,6 @@ import java.util.Set;
  */
 
 public interface QuorumVerifier {
-    long getWeight(long id);
-    boolean containsQuorum(Set<Long> set);
+    long getWeight(long id);// 获取权重
+    boolean containsQuorum(Set<Long> set);// 获取Quorum
 }

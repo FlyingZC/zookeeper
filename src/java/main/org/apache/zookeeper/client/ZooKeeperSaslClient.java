@@ -43,7 +43,7 @@ import org.apache.zookeeper.util.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 此类管理客户端的SASL身份验证。它允许ClientCnxn使用SASL与Zookeeper服务器进行身份验证。
  * This class manages SASL authentication for the client. It
  * allows ClientCnxn to authenticate using SASL with a Zookeeper server.
  */

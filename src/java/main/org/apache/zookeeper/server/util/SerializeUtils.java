@@ -112,7 +112,7 @@ public class SerializeUtils {
         }
         return txn;
     }
-
+    /**反序列化snapshot*/
     public static void deserializeSnapshot(DataTree dt,InputArchive ia,
             Map<Long, Integer> sessions) throws IOException {
         int count = ia.readInt("count");

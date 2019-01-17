@@ -52,7 +52,7 @@ public class FilePadding {
         return preAllocSize;
     }
 
-    /**
+    /** 允许设置日志文件的 预分配大小 以填充文件
      * method to allow setting preallocate size
      * of log file to pad the file.
      *

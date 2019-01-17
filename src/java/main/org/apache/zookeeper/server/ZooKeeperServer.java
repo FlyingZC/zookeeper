@@ -69,7 +69,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-/**
+/** 服务器的所有父类ZooKeeperServer. SessionExpirer中定义了expire()方法（表示会话过期）和getServerId()方法（表示获取服务器ID），而Provider则主要定义了获取服务器某些数据的方法
  * This class implements a simple standalone ZooKeeperServer. It sets up the
  * following chain of RequestProcessors to process requests:
  * PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
@@ -82,16 +82,16 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         
         Environment.logEnv("Server environment:", LOG);
     }
-
+    // JMX服务
     protected ZooKeeperServerBean jmxServerBean;
     protected DataTreeBean jmxDataTreeBean;
 
  
-    /**
+    /** 服务器将 DataTree 的加载委托给接口的实例
      * The server delegates loading of the tree to an instance of the interface
      */
     public interface DataTreeBuilder {
-        public DataTree build();
+        public DataTree build();// 构建DataTree
     }
 
     static public class BasicDataTreeBuilder implements DataTreeBuilder {
@@ -277,24 +277,24 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
          *  
          * See ZOOKEEPER-1642 for more detail.
          */
-        if(zkDb.isInitialized()){
-            setZxid(zkDb.getDataTreeLastProcessedZxid());
+        if(zkDb.isInitialized()){// 内存数据库已被初始化
+            setZxid(zkDb.getDataTreeLastProcessedZxid()); // 设置为最后处理的Zxid
         }
-        else {
+        else {// 未被初始化，则加载数据库
             setZxid(zkDb.loadDataBase());
         }
         
         // Clean up dead sessions
         LinkedList<Long> deadSessions = new LinkedList<Long>();
-        for (Long session : zkDb.getSessions()) {
-            if (zkDb.getSessionWithTimeOuts().get(session) == null) {
+        for (Long session : zkDb.getSessions()) {// 遍历所有的会话
+            if (zkDb.getSessionWithTimeOuts().get(session) == null) {// 删除过期的会话
                 deadSessions.add(session);
             }
         }
-        zkDb.setDataTreeInit(true);
-        for (long session : deadSessions) {
+        zkDb.setDataTreeInit(true);// 完成 DataTree的初始化
+        for (long session : deadSessions) {// 遍历过期会话
             // XXX: Is lastProcessedZxid really the best thing to use?
-            killSession(session, zkDb.getDataTreeLastProcessedZxid());
+            killSession(session, zkDb.getDataTreeLastProcessedZxid());// 删除会话
         }
     }
 
@@ -356,7 +356,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
                 + ", timeout of " + session.getTimeout() + "ms exceeded");
         close(sessionId);
     }
-
+    /**表示会话缺失异常*/
     public static class MissingSessionException extends IOException {
         private static final long serialVersionUID = 7467414635467261007L;
 
@@ -567,7 +567,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         return requestsInProcess.get();
     }
 
-    /**
+    /** ChangeRecord数据结构是用于方便 PrepRequestProcessor 和 FinalRequestProcessor 之间进行信息共享，其包含了一个拷贝方法duplicate，用于返回属性相同的ChangeRecord实例。
      * This structure is used to facilitate information sharing between PrepRP
      * and FinalRP.
      */
@@ -592,7 +592,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         List<ACL> acl; /* Make sure to create a new object when changing */
 
         @SuppressWarnings("unchecked")
-        ChangeRecord duplicate(long zxid) {
+        ChangeRecord duplicate(long zxid) {// 拷贝
             StatPersisted stat = new StatPersisted();
             if (this.stat != null) {
                 DataTree.copyStatPersisted(this.stat, stat);

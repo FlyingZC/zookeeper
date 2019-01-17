@@ -24,16 +24,16 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- *
+ * 二进制反序列化
  */
 public class BinaryInputArchive implements InputArchive {
-    static public final String UNREASONBLE_LENGTH= "Unreasonable length = ";
-    private DataInput in;
+    static public final String UNREASONBLE_LENGTH= "Unreasonable length = ";// 不合理长度
+    private DataInput in;// DataInput接口，用于从二进制流中读取字节
     
     static public BinaryInputArchive getArchive(InputStream strm) {
         return new BinaryInputArchive(new DataInputStream(strm));
     }
-    
+    /**内部类，对应BinaryInputArchive索引*/
     static private class BinaryIndex implements Index {
         private int nelems;
         BinaryIndex(int nelems) {
@@ -76,22 +76,22 @@ public class BinaryInputArchive implements InputArchive {
     }
     
     public String readString(String tag) throws IOException {
-    	int len = in.readInt();
+    	int len = in.readInt();// 确定长度
     	if (len == -1) return null;
         checkLength(len);
     	byte b[] = new byte[len];
-    	in.readFully(b);
+    	in.readFully(b); // 从输入流中读取一些字节，并将它们存储在缓冲区数组b中
     	return new String(b, "UTF8");
     }
-    
+    // 最大缓冲值
     static public final int maxBuffer = Integer.getInteger("jute.maxbuffer", 0xfffff);
-
+    // 读取缓冲
     public byte[] readBuffer(String tag) throws IOException {
         int len = readInt(tag);
         if (len == -1) return null;
-        checkLength(len);
+        checkLength(len);// 检查长度是否合理
         byte[] arr = new byte[len];
-        in.readFully(arr);
+        in.readFully(arr); // 从输入流中读取一些字节，并将它们存储在缓冲区数组arr中
         return arr;
     }
     
@@ -102,13 +102,13 @@ public class BinaryInputArchive implements InputArchive {
     public void startRecord(String tag) throws IOException {}
     
     public void endRecord(String tag) throws IOException {}
-    
+    // 开始读取向量
     public Index startVector(String tag) throws IOException {
         int len = readInt(tag);
         if (len == -1) {
         	return null;
         }
-		return new BinaryIndex(len);
+		return new BinaryIndex(len); // 返回索引
     }
     
     public void endVector(String tag) throws IOException {}

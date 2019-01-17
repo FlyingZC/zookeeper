@@ -18,7 +18,7 @@
 
 package org.apache.jute;
 
-/**
+/** 其用于迭代反序列化器的迭代器
  * Interface that acts as an iterator for deserializing maps.
  * The deserializer returns an instance that the record uses to
  * read vectors and maps. An example of usage is as follows:
@@ -33,6 +33,6 @@ package org.apache.jute;
  *
  */
 public interface Index {
-    public boolean done();
-    public void incr();
+    public boolean done();// 是否已经完成
+    public void incr();// 下一项
 }

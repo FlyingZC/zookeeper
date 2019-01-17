@@ -20,7 +20,7 @@ package org.apache.zookeeper.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 继承自Thread类,这是捕获线程抛出的所有未捕获异常的主类
  * This is the main class for catching all the uncaught exceptions thrown by the
  * threads.
  */

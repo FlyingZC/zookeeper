@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.TreeMap;
 
-/**
+/** 序列化接口
  * Interface that alll the serializers have to implement.
  *
  */

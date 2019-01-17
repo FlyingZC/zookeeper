@@ -47,7 +47,7 @@ import org.apache.zookeeper.txn.TxnHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 实现TxnLog接口，添加了访问该事务性日志的API
  * This class implements the TxnLog interface. It provides api's
  * to access the txnlogs and add entries to it.
  * <p>
@@ -91,37 +91,37 @@ import org.slf4j.LoggerFactory;
  */
 public class FileTxnLog implements TxnLog {
     private static final Logger LOG;
-
+    // 魔术数字
     public final static int TXNLOG_MAGIC =
         ByteBuffer.wrap("ZKLG".getBytes()).getInt();
-
+    // 版本号
     public final static int VERSION = 2;
 
     public static final String LOG_FILE_PREFIX = "log";
 
-    /** Maximum time we allow for elapsed fsync before WARNing */
+    /** Maximum time we allow for elapsed fsync before WARNing 进行同步时，发出warning之前所能等待的最长时间*/
     private final static long fsyncWarningThresholdMS;
 
-    static {
+    static {// 确定Logger、预分配空间大小和最长时间
         LOG = LoggerFactory.getLogger(FileTxnLog.class);
 
         /** Local variable to read fsync.warningthresholdms into */
-        Long fsyncWarningThreshold;
+        Long fsyncWarningThreshold;// 预分配空间大小
         if ((fsyncWarningThreshold = Long.getLong("zookeeper.fsync.warningthresholdms")) == null)
             fsyncWarningThreshold = Long.getLong("fsync.warningthresholdms", 1000);
         fsyncWarningThresholdMS = fsyncWarningThreshold;
     }
-
+    // 最大(新)的zxid
     long lastZxidSeen;
-    volatile BufferedOutputStream logStream = null;
+    volatile BufferedOutputStream logStream = null;// 存储数据相关的流
     volatile OutputArchive oa;
     volatile FileOutputStream fos = null;
-
+    // log目录文件
     File logDir;
-    private final boolean forceSync = !System.getProperty("zookeeper.forceSync", "yes").equals("no");;
-    long dbId;
+    private final boolean forceSync = !System.getProperty("zookeeper.forceSync", "yes").equals("no");// 是否强制同步
+    long dbId; // 数据库id
     private LinkedList<FileOutputStream> streamsToFlush =
-        new LinkedList<FileOutputStream>();
+        new LinkedList<FileOutputStream>();// 流列表
     File logFileWrite = null;
     private FilePadding filePadding = new FilePadding();
 
@@ -196,11 +196,11 @@ public class FileTxnLog implements TxnLog {
     public synchronized boolean append(TxnHeader hdr, Record txn)
         throws IOException
     {
-        if (hdr == null) {
+        if (hdr == null) {// 事务头部不为空
             return false;
         }
 
-        if (hdr.getZxid() <= lastZxidSeen) {
+        if (hdr.getZxid() <= lastZxidSeen) {// 事务的zxid小于等于最新的zxid
             LOG.warn("Current zxid " + hdr.getZxid()
                     + " is <= " + lastZxidSeen + " for "
                     + hdr.getType());
@@ -208,7 +208,7 @@ public class FileTxnLog implements TxnLog {
             lastZxidSeen = hdr.getZxid();
         }
 
-        if (logStream==null) {
+        if (logStream==null) {// 日志流为空
            if(LOG.isInfoEnabled()){
                 LOG.info("Creating new log file: " + Util.makeLogName(hdr.getZxid()));
            }
@@ -218,27 +218,27 @@ public class FileTxnLog implements TxnLog {
            logStream=new BufferedOutputStream(fos);
            oa = BinaryOutputArchive.getArchive(logStream);
            FileHeader fhdr = new FileHeader(TXNLOG_MAGIC,VERSION, dbId);
-           fhdr.serialize(oa, "fileheader");
+           fhdr.serialize(oa, "fileheader"); // 序列化fileheader
            // Make sure that the magic number is written before padding.
-           logStream.flush();
-           filePadding.setCurrentSize(fos.getChannel().position());
-           streamsToFlush.add(fos);
+           logStream.flush(); // 刷新到磁盘
+           filePadding.setCurrentSize(fos.getChannel().position());// 当前通道的大小
+           streamsToFlush.add(fos);// 添加fos
         }
-        filePadding.padFile(fos.getChannel());
-        byte[] buf = Util.marshallTxnEntry(hdr, txn);
+        filePadding.padFile(fos.getChannel()); // 填充文件
+        byte[] buf = Util.marshallTxnEntry(hdr, txn);// 将 事务头 和 事务数据 序列化成 Byte Buffer
         if (buf == null || buf.length == 0) {
             throw new IOException("Faulty serialization for header " +
                     "and txn");
         }
-        Checksum crc = makeChecksumAlgorithm();
-        crc.update(buf, 0, buf.length);
-        oa.writeLong(crc.getValue(), "txnEntryCRC");
-        Util.writeTxnBytes(oa, buf);
+        Checksum crc = makeChecksumAlgorithm();// 生成一个验证算法
+        crc.update(buf, 0, buf.length);// 使用Byte数组来更新当前的Checksum
+        oa.writeLong(crc.getValue(), "txnEntryCRC");// 写long类型数据
+        Util.writeTxnBytes(oa, buf);// 将序列化的事务记录写入OutputArchive
 
         return true;
     }
 
-    /**
+    /** 查找从快照开始或刚好在快照之前的日志文件。返回此日志和所有后续日志。结果按文件的zxid，升序排序。
      * Find the log file that starts at, or just before, the snapshot. Return
      * this and all subsequent logs. Results are ordered by zxid of file,
      * ascending order.
@@ -314,7 +314,7 @@ public class FileTxnLog implements TxnLog {
         }
     }
 
-    /**
+    /** 提交事务日志至磁盘
      * commit the logs. make sure that evertyhing hits the
      * disk
      */
@@ -358,7 +358,7 @@ public class FileTxnLog implements TxnLog {
         return new FileTxnIterator(logDir, zxid);
     }
 
-    /**
+    /** 清空大于给定zxid的所有事务日志
      * truncate the current transaction logs
      * @param zxid the zxid to truncate the logs to
      * @return true if successful false if not
@@ -615,7 +615,7 @@ public class FileTxnLog implements TxnLog {
             return new Adler32();
         }
 
-        /**
+        /** 迭代下一个transaction
          * the iterator that moves to the next transaction
          * @return true if there is more transactions to be read
          * false if not.

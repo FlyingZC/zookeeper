@@ -84,11 +84,11 @@ import org.apache.zookeeper.server.ZooTrace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 此类管理客户端的套接字I/O.ClientCnxn维护一个可连接的可用服务器列表,并根据需要 透明地 切换它所连接的服务器
  * This class manages the socket i/o for the client. ClientCnxn maintains a list
  * of available servers to connect to and "transparently" switches servers it is
  * connected to as needed.
- *
+ * ClientCnxn 是客户端操作ClientCnxnSocketNIO的工具,维护了发送任务线程 SendThread,事件任务线程 EventThead,发送队列 OutgoingQueue 以及请求消息的等待队列 PendingQueue
  */
 public class ClientCnxn {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxn.class);
@@ -135,12 +135,12 @@ public class ClientCnxn {
 
     private final CopyOnWriteArraySet<AuthData> authInfo = new CopyOnWriteArraySet<AuthData>();
 
-    /**
+    /** 这些是已发送并正在等待响应的数据包
      * These are the packets that have been sent and are waiting for a response.
      */
     private final LinkedList<Packet> pendingQueue = new LinkedList<Packet>();
 
-    /**
+    /** 这些是需要发送的数据包
      * These are the packets that need to be sent.
      */
     private final LinkedList<Packet> outgoingQueue = new LinkedList<Packet>();
@@ -189,7 +189,7 @@ public class ClientCnxn {
      */
     private volatile boolean closing = false;
     
-    /**
+    /** 可以连接的ZK服务器列表
      * A set of ZooKeeper hosts this client could connect to.
      */
     private final HostProvider hostProvider;
@@ -245,13 +245,13 @@ public class ClientCnxn {
         return sb.toString();
     }
 
-    /**
+    /** Clientcnxn发送请求到服务端都是将 请求数据 和 响应数据 以及 连接信息 封装到Packet类中进行处理
      * This class allows us to pass the headers and the relevant records around.
      */
     static class Packet {
         RequestHeader requestHeader;
 
-        ReplyHeader replyHeader;
+        ReplyHeader replyHeader;// 响应头
 
         Record request;
 
@@ -446,7 +446,7 @@ public class ClientCnxn {
             replaceAll("-EventThread", "");
         return name + suffix;
     }
-
+    /** EventThread负责处理Server返回的WatchedEvent,回调注册的客户端事件接口处理函数*/
     class EventThread extends ZooKeeperThread {
         private final LinkedBlockingQueue<Object> waitingEvents =
             new LinkedBlockingQueue<Object>();
@@ -649,11 +649,11 @@ public class ClientCnxn {
         }
 
         if (p.cb == null) {
-            synchronized (p) {
+            synchronized (p) {// 1.同步notifyAll,结束
                 p.finished = true;
                 p.notifyAll();
             }
-        } else {
+        } else {// 2.异步加入到event线程的队列
             p.finished = true;
             eventThread.queuePacket(p);
         }
@@ -722,7 +722,7 @@ public class ClientCnxn {
     public static final int packetLen = Integer.getInteger("jute.maxbuffer",
             4096 * 1024);
 
-    /**
+    /** 此类为outgoing(传出)请求队列提供服务并生成心跳.它还会产生ReadThread
      * This class services the outgoing request queue and generates the heart
      * beats. It also spawns the ReadThread.
      */
@@ -739,7 +739,7 @@ public class ClientCnxn {
             ReplyHeader replyHdr = new ReplyHeader();
 
             replyHdr.deserialize(bbia, "header");
-            if (replyHdr.getXid() == -2) {
+            if (replyHdr.getXid() == -2) {// 先读响应头,先对特殊的xid进行处理
                 // -2 is the xid for pings
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got ping response for sessionid: 0x"
@@ -813,7 +813,7 @@ public class ClientCnxn {
                     throw new IOException("Nothing in the queue, but got "
                             + replyHdr.getXid());
                 }
-                packet = pendingQueue.remove();
+                packet = pendingQueue.remove();// 由于client和server都是单线程处理,多队列处理.所以认为全局有序
             }
             /*
              * Since requests are processed in order, we better get a response
@@ -882,7 +882,7 @@ public class ClientCnxn {
             isFirstConnect = false;
             long sessId = (seenRwServerBefore) ? sessionId : 0;
             ConnectRequest conReq = new ConnectRequest(0, lastZxid,
-                    sessionTimeout, sessId, sessionPasswd);
+                    sessionTimeout, sessId, sessionPasswd);// 构建ConnectRequest
             synchronized (outgoingQueue) {
                 // We add backwards since we are pushing into the front
                 // Only send if there's a pending watch
@@ -933,7 +933,7 @@ public class ClientCnxn {
                             RequestHeader h = new RequestHeader();
                             h.setType(ZooDefs.OpCode.setWatches);
                             h.setXid(-8);
-                            Packet packet = new Packet(h, new ReplyHeader(), sw, null, null);
+                            Packet packet = new Packet(h, new ReplyHeader(), sw, null, null);// 组合成Packet对象,添加到发送队列,对于ConnectRequest其requestHeader为null
                             outgoingQueue.addFirst(packet);
                         }
                     }
@@ -947,7 +947,7 @@ public class ClientCnxn {
                 outgoingQueue.addFirst(new Packet(null, null, conReq,
                             null, null, readOnly));
             }
-            clientCnxnSocket.enableReadWriteOnly();
+            clientCnxnSocket.enableReadWriteOnly();// 确保读写事件都监听
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Session establishment request sent on "
                         + clientCnxnSocket.getRemoteSocketAddress());
@@ -1016,9 +1016,9 @@ public class ClientCnxn {
                     saslLoginFailed = true;
                 }
             }
-            logStartConnect(addr);
+            logStartConnect(addr);// 打日志
 
-            clientCnxnSocket.connect(addr);
+            clientCnxnSocket.connect(addr);// 使用clientCnxnSocketNIO建立连接
         }
 
         private void logStartConnect(InetSocketAddress addr) {
@@ -1036,14 +1036,14 @@ public class ClientCnxn {
         public void run() {
             clientCnxnSocket.introduce(this,sessionId);
             clientCnxnSocket.updateNow();
-            clientCnxnSocket.updateLastSendAndHeard();
+            clientCnxnSocket.updateLastSendAndHeard();// 设置clientCnxnSocket 最后发送时间,最后的心跳时间
             int to;
             long lastPingRwServer = Time.currentElapsedTime();
             final int MAX_SEND_PING_INTERVAL = 10000; //10 seconds
             InetSocketAddress serverAddress = null;
             while (state.isAlive()) {
                 try {
-                    if (!clientCnxnSocket.isConnected()) {
+                    if (!clientCnxnSocket.isConnected()) {// 未连接
                         if(!isFirstConnect){
                             try {
                                 Thread.sleep(r.nextInt(1000));
@@ -1061,7 +1061,7 @@ public class ClientCnxn {
                         } else {
                             serverAddress = hostProvider.next(1000);
                         }
-                        startConnect(serverAddress);
+                        startConnect(serverAddress);// 建立与server的连接
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
@@ -1116,10 +1116,10 @@ public class ClientCnxn {
                     	//1000(1 second) is to prevent race condition missing to send the second ping
                     	//also make sure not to send too many pings when readTimeout is small 
                         int timeToNextPing = readTimeout / 2 - clientCnxnSocket.getIdleSend() - 
-                        		((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
+                        		((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);// 计算下次ping的时间,发送心跳
                         //send a ping request either time is due or no packet sent out within MAX_SEND_PING_INTERVAL
                         if (timeToNextPing <= 0 || clientCnxnSocket.getIdleSend() > MAX_SEND_PING_INTERVAL) {
-                            sendPing();
+                            sendPing();// 发送ping
                             clientCnxnSocket.updateLastSend();
                         } else {
                             if (timeToNextPing < to) {
@@ -1142,7 +1142,7 @@ public class ClientCnxn {
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
 
-                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, ClientCnxn.this);
+                    clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, ClientCnxn.this);// 委托给 clientCnxnSocket.doTransport()进行底层的nio传输
                 } catch (Throwable e) {
                     if (closing) {
                         if (LOG.isDebugEnabled()) {
@@ -1405,10 +1405,10 @@ public class ClientCnxn {
             throws InterruptedException {
         ReplyHeader r = new ReplyHeader();
         Packet packet = queuePacket(h, r, request, response, null, null, null,
-                    null, watchRegistration);
+                    null, watchRegistration);// 将Request等信息封装成packet,放入outgoingQueue队列中
         synchronized (packet) {
             while (!packet.finished) {
-                packet.wait();
+                packet.wait();// 调用线程wait方法等待该Request从服务端获得响应为止
             }
         }
         return r;
@@ -1434,7 +1434,7 @@ public class ClientCnxn {
         p.cb = cb;
         sendThread.sendPacket(p);
     }
-
+    /**数据包packet入queue*/
     Packet queuePacket(RequestHeader h, ReplyHeader r, Record request,
             Record response, AsyncCallback cb, String clientPath,
             String serverPath, Object ctx, WatchRegistration watchRegistration)
@@ -1458,7 +1458,7 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
-                outgoingQueue.add(packet);
+                outgoingQueue.add(packet);// packet入queue
             }
         }
         sendThread.getClientCnxnSocket().wakeupCnxn();

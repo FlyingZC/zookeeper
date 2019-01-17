@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
-/**
+/**  ClientCntx连接时可以同时指定多台服务器地址，根据一定的算法挑选某一个服务器地址进行连接，当某个服务器发生故障无法连接时，会自动连接其他的服务器。 实现这一机制的是HostProdiver接口，实现用StaticHostProvider类。
  * A set of hosts a ZooKeeper client should connect to.
  * 
  * Classes implementing this interface must guarantee the following:

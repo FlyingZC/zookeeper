@@ -797,7 +797,7 @@ public class AuthFastLeaderElection implements Election {
             return false;
 
     }
-
+    /**判断Leader选举是否结束，即是否有一半以上的服务器选出了相同的Leader，其过程是将收到的选票与当前选票进行对比，选票相同的放入同一个集合，之后判断选票相同的集合是否超过了半数*/
     private boolean termPredicate(HashMap<InetSocketAddress, Vote> votes,
             long l, long zxid) {
 
@@ -808,12 +808,12 @@ public class AuthFastLeaderElection implements Election {
          * First make the views consistent. Sometimes peers will have different
          * zxids for a server depending on timing.
          */
-        for (Vote v : votesCast) {
+        for (Vote v : votesCast) {// 遍历已经接收的投票集合
             if ((v.getId() == l) && (v.getZxid() == zxid))
                 count++;
         }
 
-        if (count > (self.getVotingView().size() / 2))
+        if (count > (self.getVotingView().size() / 2))// 统计,查看投某个id的票数是否超过一半
             return true;
         else
             return false;

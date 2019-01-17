@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.txn.TxnHeader;
 
-/**
+/** 工具类，提供持久化所需的API
  * A collection of utility methods for dealing with file name parsing, 
  * low level I/O file operations and marshalling/unmarshalling.
  */
@@ -126,7 +126,7 @@ public class Util {
         return props.getProperty(DB_FORMAT_CONV);
     }
    
-    /**
+    /** 从fileName中提取zxid
      * Extracts zxid from the file name. The file name should have been created
      * using one of the {@link makeLogName} or {@link makeSnapshotName}.
      * 
@@ -146,7 +146,7 @@ public class Util {
         return zxid;
     }
 
-    /**
+    /** 验证该文件是否为有效快照。如果快照在 服务器存储快照的过程中挂掉 的情况下不完整，则快照可能无效。任何非快照的文件也都是无效快照。
      * Verifies that the file is a valid snapshot. Snapshot may be invalid if 
      * it's incomplete as in a situation when the server dies while in the process
      * of storing a snapshot. Any file that is not a snapshot is also 
@@ -164,16 +164,16 @@ public class Util {
         RandomAccessFile raf = new RandomAccessFile(f, "r");
         try {
             // including the header and the last / bytes
-            // the snapshot should be atleast 10 bytes
+            // the snapshot should be atleast 10 bytes 包括头部和最后'/'字节，快照应至少为10个字节
             if (raf.length() < 10) {
                 return false;
             }
-            raf.seek(raf.length() - 5);
+            raf.seek(raf.length() - 5);// 移动至倒数第五个字节
             byte bytes[] = new byte[5];
             int readlen = 0;
             int l;
             while(readlen < 5 &&
-                  (l = raf.read(bytes, readlen, bytes.length - readlen)) >= 0) {
+                  (l = raf.read(bytes, readlen, bytes.length - readlen)) >= 0) {// 将最后五个字节存入bytes中
                 readlen += l;
             }
             if (readlen != bytes.length) {
@@ -184,7 +184,7 @@ public class Util {
             ByteBuffer bb = ByteBuffer.wrap(bytes);
             int len = bb.getInt();
             byte b = bb.get();
-            if (len != 1 || b != '/') {
+            if (len != 1 || b != '/') {// 最后字符不为"/",不合法
                 LOG.info("Invalid snapshot " + f + " len = " + len
                         + " byte = " + (b & 0xff));
                 return false;
@@ -278,7 +278,7 @@ public class Util {
         }
     }
     
-    /**
+    /** 按照zxid给files排序
      * Sort the list of files. Recency as determined by the version component
      * of the file name.
      *

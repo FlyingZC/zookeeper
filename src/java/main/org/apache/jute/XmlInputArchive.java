@@ -33,7 +33,7 @@ import org.xml.sax.helpers.DefaultHandler;
  *
  */
 class XmlInputArchive implements InputArchive {
-    
+    // 内部类，值（包含类型和值）
     static private class Value {
         private String type;
         private StringBuffer sb;
@@ -48,7 +48,7 @@ class XmlInputArchive implements InputArchive {
         public String getValue() { return sb.toString(); }
         public String getType() { return type; }
     }
-    
+    // 内部类，XML解析器
     private static class XMLParser extends DefaultHandler {
         private boolean charsValid = false;
         
@@ -61,28 +61,28 @@ class XmlInputArchive implements InputArchive {
         public void startDocument() throws SAXException {}
         
         public void endDocument() throws SAXException {}
-        
+        // 开始解析元素
         public void startElement(String ns,
                 String sname,
                 String qname,
                 Attributes attrs) throws SAXException {
             charsValid = false;
             if ("boolean".equals(qname) ||
-                    "i4".equals(qname) ||
+                    "i4".equals(qname) ||// 四个字节
                     "int".equals(qname) ||
                     "string".equals(qname) ||
                     "double".equals(qname) ||
-                    "ex:i1".equals(qname) ||
+                    "ex:i1".equals(qname) ||// 一个字节
                     "ex:i8".equals(qname) ||
                     "ex:float".equals(qname)) {
                 charsValid = true;
                 valList.add(new Value(qname));
             } else if ("struct".equals(qname) ||
-                "array".equals(qname)) {
+                "array".equals(qname)) {// 结构体或数组类型
                 valList.add(new Value(qname));
             }
         }
-        
+        // 结束解析元素
         public void endElement(String ns,
                 String sname,
                 String qname) throws SAXException {
@@ -102,7 +102,7 @@ class XmlInputArchive implements InputArchive {
         }
         
     }
-    
+    // 内部类，对应XmlInputArchive的索引
     private class XmlIndex implements Index {
         public boolean done() {
             Value v = valList.get(vIdx);

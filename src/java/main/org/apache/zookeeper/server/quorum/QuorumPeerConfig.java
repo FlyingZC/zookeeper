@@ -140,7 +140,7 @@ public class QuorumPeerConfig {
                 throw new IllegalArgumentException(configFile.toString()
                         + " file is missing");
             }
-
+			// 读取zoo.cfg到cfg中
             Properties cfg = new Properties();
             FileInputStream in = new FileInputStream(configFile);
             try {
@@ -157,7 +157,7 @@ public class QuorumPeerConfig {
         }
     }
 
-    /**
+    /** 从Properties中解析配置
      * Parse config from a Properties.
      * @param zkProp Properties to parse from.
      * @throws IOException
@@ -273,7 +273,7 @@ public class QuorumPeerConfig {
             } else if (key.equals("quorum.cnxn.threads.size")) {
                 quorumCnxnThreadsSize = Integer.parseInt(value);
             } else {
-                System.setProperty("zookeeper." + key, value);
+                System.setProperty("zookeeper." + key, value);// key形如server.3,即配置文件中server.A=B:C:D配置
             }
         }
         if (!quorumEnableSasl && quorumServerRequireSasl) {

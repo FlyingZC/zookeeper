@@ -23,14 +23,14 @@ import java.util.Map;
 
 import org.apache.zookeeper.server.DataTree;
 
-/**
+/** 持久层快照接口
  * snapshot interface for the persistence layer.
  * implement this interface for implementing 
  * snapshots.
  */
 public interface SnapShot {
     
-    /**
+    /** 从最后一个有效快照反序列化数据树，并返回反序列化的最后一个zxid
      * deserialize a data tree from the last valid snapshot and 
      * return the last zxid that was deserialized
      * @param dt the datatree to be deserialized into
@@ -41,7 +41,7 @@ public interface SnapShot {
     long deserialize(DataTree dt, Map<Long, Integer> sessions) 
         throws IOException;
     
-    /**
+    /** 将datatree和session持久化存储
      * persist the datatree and the sessions into a persistence storage
      * @param dt the datatree to be serialized
      * @param sessions 
@@ -51,14 +51,14 @@ public interface SnapShot {
             File name) 
         throws IOException;
     
-    /**
+    /** 查找最新的snapshot文件
      * find the most recent snapshot file
      * @return the most recent snapshot file
      * @throws IOException
      */
     File findMostRecentSnapshot() throws IOException;
     
-    /**
+    /** 释放资源
      * free resources from this snapshot immediately
      * @throws IOException
      */

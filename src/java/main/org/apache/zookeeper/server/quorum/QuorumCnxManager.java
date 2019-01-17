@@ -51,7 +51,7 @@ import org.apache.zookeeper.server.quorum.auth.QuorumAuthServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 连接管理器,使用TCP通信,负责各台服务器之间的底层Leader选举过程中的网络通信.QuorumCnxManager可以保证每对peer之间只有一个链接,如果有server发起新的链接,则比较sid,sid大的保留链接,小的放弃链接.
  * This class implements a connection manager for leader election using TCP. It
  * maintains one connection for every pair of servers. The tricky part is to
  * guarantee that there is exactly one connection for every pair of servers that
@@ -120,14 +120,14 @@ public class QuorumCnxManager {
      */
     private AtomicInteger connectionThreadCnt = new AtomicInteger(0);
 
-    /*
+    /* sid与SendWorker映射,发送器集合，每个SenderWorker消息发送器，都对应一台远程Zookeeper服务器，负责消息的发送，也按照SID进行分组。
      * Mapping from Peer to Thread number
      */
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
-    final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
-    final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
+    final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;// sid -> buffer queue,消息发送队列，用于保存那些待发送的消息，按照SID进行分组
+    final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;// 最近发送过的消息，为每个SID保留最近发送过的一个消息
 
-    /*
+    /* 所有收到的消息都放到recvQueue
      * Reception queue
      */
     public final ArrayBlockingQueue<Message> recvQueue;
@@ -142,7 +142,7 @@ public class QuorumCnxManager {
 
     volatile boolean shutdown = false;
 
-    /*
+    /* 收发消息时和上面两个队列交互
      * Listener thread
      */
     public final Listener listener;
@@ -187,9 +187,9 @@ public class QuorumCnxManager {
                             ConcurrentHashMap<Long, SendWorker> senderWorkerMap) {
         this.senderWorkerMap = senderWorkerMap;
 
-        this.recvQueue = new ArrayBlockingQueue<Message>(RECV_CAPACITY);
-        this.queueSendMap = new ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>>();
-        this.lastMessageSent = new ConcurrentHashMap<Long, ByteBuffer>();
+        this.recvQueue = new ArrayBlockingQueue<Message>(RECV_CAPACITY);// 所有收到的消息都放到recvQueue
+        this.queueSendMap = new ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>>();// 消息发送队列，用于保存那些待发送的消息，按照SID进行分组
+        this.lastMessageSent = new ConcurrentHashMap<Long, ByteBuffer>();// 最近发送过的消息，为每个SID保留最近发送过的一个消息
         String cnxToValue = System.getProperty("zookeeper.cnxTimeout");
         if(cnxToValue != null){
             this.cnxTO = Integer.parseInt(cnxToValue);
@@ -203,7 +203,7 @@ public class QuorumCnxManager {
         initializeAuth(mySid, authServer, authLearner, quorumCnxnThreadsSize,
                 quorumSaslAuthEnabled);
 
-        // Starts listener thread that waits for connection requests 
+        // Starts listener thread that waits for connection requests.启动listener线程来等待 连接请求 
         listener = new Listener();
     }
 
@@ -257,7 +257,7 @@ public class QuorumCnxManager {
         initiateConnection(sock, sid);
     }
     
-    /**
+    /** 如果此服务器已启动连接，则它会在连接丢失时放弃连接。否则，它保持连接
      * If this server has initiated the connection, then it gives up on the
      * connection if it loses challenge. Otherwise, it keeps the connection.
      */
@@ -340,15 +340,15 @@ public class QuorumCnxManager {
         }
 
         // authenticate learner
-        authLearner.authenticate(sock, view.get(sid).hostname);
+        authLearner.authenticate(sock, view.get(sid).hostname);// 验证learner
 
         // If lost the challenge, then drop the new connection
-        if (sid > this.mySid) {
+        if (sid > this.mySid) {// 若sid > 本机id,关闭socket
             LOG.info("Have smaller server identifier, so dropping the " +
                      "connection: (" + sid + ", " + this.mySid + ")");
             closeSocket(sock);
             // Otherwise proceed with the connection
-        } else {
+        } else {// 若sid < 本机id.创建worker线程
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, din, sid, sw);
             sw.setRecv(rw);
@@ -358,7 +358,7 @@ public class QuorumCnxManager {
             if(vsw != null)
                 vsw.finish();
             
-            senderWorkerMap.put(sid, sw);
+            senderWorkerMap.put(sid, sw);// 缓存sendWorker
             queueSendMap.putIfAbsent(sid, new ArrayBlockingQueue<ByteBuffer>(SEND_CAPACITY));
             
             sw.start();
@@ -370,7 +370,7 @@ public class QuorumCnxManager {
         return false;
     }
 
-    /**
+    /** 建立连接
      * If this server receives a connection request, then it gives up on the new
      * connection if it wins. Notice that it checks whether it has a connection
      * to this server already or not. If it does, then it sends the smallest
@@ -430,7 +430,7 @@ public class QuorumCnxManager {
             // Read server id
             sid = din.readLong();
             if (sid < 0) { // this is not a server id but a protocol version (see ZOOKEEPER-1633)
-                sid = din.readLong();
+                sid = din.readLong();// //  读取请求连接zookeeper server的sid(myid)
 
                 // next comes the #bytes in the remainder of the message
                 // note that 0 bytes is fine (old servers)
@@ -448,7 +448,7 @@ public class QuorumCnxManager {
                     LOG.error("Read only " + num_read + " bytes out of " + num_remaining_bytes + " sent by server " + sid);
                 }
             }
-            if (sid == QuorumPeer.OBSERVER_ID) {
+            if (sid == QuorumPeer.OBSERVER_ID) {// 当sid为Long.MAX_VALUE,代表观察者?
                 /*
                  * Choose identifier at random. We need a value to identify
                  * the connection.
@@ -462,12 +462,12 @@ public class QuorumCnxManager {
             return;
         }
 
-        // do authenticating learner
+        // do authenticating learner.认证learner
         LOG.debug("Authenticating learner server.id: {}", sid);
         authServer.authenticate(sock, din);
 
         //If wins the challenge, then close the new connection.
-        if (sid < this.mySid) {
+        if (sid < this.mySid) {// 1.对方sid小于自己sid,立马关闭连接.自己做为client向对方请求建立连接.**注意zookeeper服务之间都是配置myid大的作为客户端连接,myid小的作为服务器端**
             /*
              * This replica might still believe that the connection to sid is
              * up, so we have to shut down the workers before trying to open a
@@ -483,12 +483,12 @@ public class QuorumCnxManager {
              */
             LOG.debug("Create new connection to server: " + sid);
             closeSocket(sock);
-            connectOne(sid);
+            connectOne(sid);// 创建新连接
 
             // Otherwise start worker threads to receive data.
-        } else {
-            SendWorker sw = new SendWorker(sock, sid);
-            RecvWorker rw = new RecvWorker(sock, din, sid, sw);
+        } else {// 否则启动工作线程以接收数据.2.对方sid大于自己sid，创建server端的发送线程任务和接收线程任务，并且启动任务准备发送和接收client端数据
+            SendWorker sw = new SendWorker(sock, sid);// 发送线程
+            RecvWorker rw = new RecvWorker(sock, din, sid, sw);// 接收线程
             sw.setRecv(rw);
 
             SendWorker vsw = senderWorkerMap.get(sid);
@@ -498,7 +498,7 @@ public class QuorumCnxManager {
             
             senderWorkerMap.put(sid, sw);
             queueSendMap.putIfAbsent(sid, new ArrayBlockingQueue<ByteBuffer>(SEND_CAPACITY));
-            
+            // 启动 发送线程 和 接收线程
             sw.start();
             rw.start();
             
@@ -506,43 +506,43 @@ public class QuorumCnxManager {
         }
     }
 
-    /**
-     * Processes invoke this message to queue a message to send. Currently, 
+    /** 该方法目前只有leader选举时使用.
+     * Processes invoke this message to queue a message to send. Currently,
      * only leader election uses it.
      */
     public void toSend(Long sid, ByteBuffer b) {
         /*
          * If sending message to myself, then simply enqueue it (loopback).
          */
-        if (this.mySid == sid) {
-             b.position(0);
-             addToRecvQueue(new Message(b.duplicate(), sid));
+        if (this.mySid == sid) {// 自己给自己发消息
+             b.position(0);// 给自己发的消息处理成空消息?
+             addToRecvQueue(new Message(b.duplicate(), sid));// 添加到 接收队列
             /*
              * Otherwise send to the corresponding thread to send.
              */
-        } else {
-             /*
+        } else {// 消息发给他人
+             /* 如果没有连接，则启动新连接
               * Start a new connection if doesn't have one already.
               */
              ArrayBlockingQueue<ByteBuffer> bq = new ArrayBlockingQueue<ByteBuffer>(SEND_CAPACITY);
-             ArrayBlockingQueue<ByteBuffer> bqExisting = queueSendMap.putIfAbsent(sid, bq);
+             ArrayBlockingQueue<ByteBuffer> bqExisting = queueSendMap.putIfAbsent(sid, bq);// 给该sid尚未发送的消息队列
              if (bqExisting != null) {
-                 addToSendQueue(bqExisting, b);
+                 addToSendQueue(bqExisting, b);// 面向该sid的消息队列还有消息尚未发送,将新消息也放进去
              } else {
-                 addToSendQueue(bq, b);
+                 addToSendQueue(bq, b);// 原来old队列中没有消息未发送(面向该sid的消息队列已空),则将消息添加到新创建的局部变量bq队列中
              }
              connectOne(sid);
                 
         }
     }
     
-    /**
+    /** 尝试使用其electionAddr与id sid建立与服务器的连接。本zookeeper(服务)作为客户端向sid(myid)的zookeeper发起链接请求
      * Try to establish a connection to server with id sid.
      * 
      *  @param sid  server id
      */
-    synchronized public void connectOne(long sid){
-        if (!connectedToPeer(sid)){
+    synchronized public void connectOne(long sid){// electionAddr 为要连接的server的ip加选举端口,如localhost/127.0.0.1:33339
+        if (!connectedToPeer(sid)){// 已经建立连接
             InetSocketAddress electionAddr;
             if (view.containsKey(sid)) {
                 electionAddr = view.get(sid).electionAddr;
@@ -552,10 +552,10 @@ public class QuorumCnxManager {
             }
             try {
 
-                LOG.debug("Opening channel to server " + sid);
+                LOG.debug("Opening channel to server " + sid);// 创建连接
                 Socket sock = new Socket();
                 setSockOpts(sock);
-                sock.connect(view.get(sid).electionAddr, cnxTO);
+                sock.connect(view.get(sid).electionAddr, cnxTO);// 建立socket连接
                 LOG.debug("Connected to server " + sid);
 
                 // Sends connection request asynchronously if the quorum
@@ -564,7 +564,7 @@ public class QuorumCnxManager {
                 // finish, this may delay next peer connection requests.
                 if (quorumSaslAuthEnabled) {
                     initiateConnectionAsync(sock, sid);
-                } else {
+                } else {// 默认同步
                     initiateConnection(sock, sid);
                 }
             } catch (UnresolvedAddressException e) {
@@ -612,7 +612,7 @@ public class QuorumCnxManager {
     }
     
 
-    /**
+    /** 检查所有 发送队列 是否为空，表示所有消息都已传递
      * Check if all queues are empty, indicating that all messages have been delivered.
      */
     boolean haveDelivered() {
@@ -701,11 +701,11 @@ public class QuorumCnxManager {
         connectionThreadCnt.set(0);
     }
 
-    /**
+    /** 该线程监听端口.绑定地址开启ServerSocket服务,用来侦听其他server连接,进行集体间选举,投票,数据同步
      * Thread to listen on some port
      */
     public class Listener extends ZooKeeperThread {
-
+        // 选举ServerSocket,如监听33339端口
         volatile ServerSocket ss = null;
 
         public Listener() {
@@ -733,7 +733,7 @@ public class QuorumCnxManager {
                         addr = view.get(QuorumCnxManager.this.mySid)
                             .electionAddr;
                     }
-                    LOG.info("My election bind port: " + addr.toString());
+                    LOG.info("My election bind port: " + addr.toString());// 我的选举绑定端口,如localhost/127.0.0.1:33339
                     setName(view.get(QuorumCnxManager.this.mySid)
                             .electionAddr.toString());
                     ss.bind(addr);
@@ -741,7 +741,7 @@ public class QuorumCnxManager {
                         Socket client = ss.accept();
                         setSockOpts(client);
                         LOG.info("Received connection request "
-                                + client.getRemoteSocketAddress());
+                                + client.getRemoteSocketAddress());// 收到连接请求
 
                         // Receive and handle the connection request
                         // asynchronously if the quorum sasl authentication is
@@ -751,7 +751,7 @@ public class QuorumCnxManager {
                         if (quorumSaslAuthEnabled) {
                             receiveConnectionAsync(client);
                         } else {
-                            receiveConnection(client);
+                            receiveConnection(client);// 处理接收连接
                         }
 
                         numRetries = 0;
@@ -808,7 +808,7 @@ public class QuorumCnxManager {
         volatile boolean running = true;
         DataOutputStream dout;
 
-        /**
+        /** 此线程的实例 接收 通过队列发送的消息, 并将它们 发送到服务器sid
          * An instance of this thread receives messages to send
          * through a queue and sends them to the server sid.
          * 
@@ -952,7 +952,7 @@ public class QuorumCnxManager {
         }
     }
 
-    /**
+    /** 用于接收消息的线程。实例等待套接字读取。如果通道中断，则将其自身从接收器池中移除。
      * Thread to receive messages. Instance waits on a socket read. If the
      * channel breaks, then removes itself from the pool of receivers.
      */
@@ -1034,7 +1034,7 @@ public class QuorumCnxManager {
         }
     }
 
-    /**
+    /** 向消息buffer添加到待发送的queue中
      * Inserts an element in the specified queue. If the Queue is full, this
      * method removes an element from the head of the Queue and then inserts
      * the element at the tail. It can happen that the an element is removed
@@ -1094,7 +1094,7 @@ public class QuorumCnxManager {
        return queue.poll(timeout, unit);
     }
 
-    /**
+    /** 消息入队,若Queue满了,移除头元素并入队尾
      * Inserts an element in the {@link #recvQueue}. If the Queue is full, this
      * methods removes an element from the head of the Queue and then inserts
      * the element at the tail of the queue.
@@ -1116,9 +1116,9 @@ public class QuorumCnxManager {
      */
     public void addToRecvQueue(Message msg) {
         synchronized(recvQLock) {
-            if (recvQueue.remainingCapacity() == 0) {
+            if (recvQueue.remainingCapacity() == 0) {// 队满
                 try {
-                    recvQueue.remove();
+                    recvQueue.remove();// 移除队首元素
                 } catch (NoSuchElementException ne) {
                     // element could be removed by poll()
                      LOG.debug("Trying to remove from an empty " +
@@ -1126,7 +1126,7 @@ public class QuorumCnxManager {
                 }
             }
             try {
-                recvQueue.add(msg);
+                recvQueue.add(msg);// 消息入队
             } catch (IllegalStateException ie) {
                 // This should never happen
                 LOG.error("Unable to insert element in the recvQueue " + ie);
@@ -1134,7 +1134,7 @@ public class QuorumCnxManager {
         }
     }
 
-    /**
+    /** 从recvQueue中取元素
      * Retrieves and removes a message at the head of this queue,
      * waiting up to the specified wait time if necessary for an element to
      * become available.

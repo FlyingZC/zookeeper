@@ -31,7 +31,7 @@ import org.apache.zookeeper.jmx.ManagedUtil;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
-/**
+/** 单机版zk启动类
  * This class starts and runs a standalone ZooKeeperServer.
  */
 @InterfaceAudience.Public
@@ -121,7 +121,7 @@ public class ZooKeeperServerMain {
                     config.getMaxClientCnxns());
             cnxnFactory.startup(zkServer);
             // Watch status of ZooKeeper server. It will do a graceful shutdown
-            // if the server is not running or hits an internal error.
+            // if the server is not running or hits an internal error.观察ZooKeeper服务器的状态。如果服务器未运行或遇到内部错误，它将执行正常关闭
             shutdownLatch.await();
             shutdown();
 

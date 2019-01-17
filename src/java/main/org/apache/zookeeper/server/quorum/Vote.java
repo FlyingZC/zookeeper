@@ -22,7 +22,7 @@ import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+/**投票 选举对象*/
 public class Vote {
     private static final Logger LOG = LoggerFactory.getLogger(Vote.class);
     
@@ -40,11 +40,11 @@ public class Vote {
                     long zxid, 
                     long peerEpoch) {
         this.version = 0x0;
-        this.id = id;
-        this.zxid = zxid;
-        this.electionEpoch = -1;
-        this.peerEpoch = peerEpoch;
-        this.state = ServerState.LOOKING;
+        this.id = id;// 被推举的Leader的SID
+        this.zxid = zxid;// 被推举Leader的事务ID
+        this.electionEpoch = -1;// 逻辑时钟，用来判断多个投票是否在同一轮选举周期中，该值在服务端是一个自增序列，每次进入新一轮的投票后，都会对该值进行加1操作
+        this.peerEpoch = peerEpoch;// 被推举的Leader的epoch
+        this.state = ServerState.LOOKING;// 当前服务器的状态
     }
 
     public Vote(long id, 
@@ -91,9 +91,9 @@ public class Vote {
     final private long id;
     
     final private long zxid;
-    
+    /**逻辑时钟，用来判断多个投票是否在同一轮选举周期中.该值在服务端是一个自增序列，每次进入新一轮的投票后，都会对该值进行加1操作*/
     final private long electionEpoch;
-    
+    /**被推举的Leader的epoch*/
     final private long peerEpoch;
     
     public int getVersion() {
@@ -119,7 +119,7 @@ public class Vote {
     public ServerState getState() {
         return state;
     }
-
+    /**当前服务器的状态*/
     final private ServerState state;
     
     @Override

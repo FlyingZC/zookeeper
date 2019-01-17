@@ -64,7 +64,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
-        if (sockKey.isReadable()) {
+        if (sockKey.isReadable()) {// 可读.即处理服务端返回的信息
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
                 throw new EndOfStreamException(
@@ -98,10 +98,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
-        if (sockKey.isWritable()) {
+        if (sockKey.isWritable()) {// 可写
             synchronized(outgoingQueue) {
                 Packet p = findSendablePacket(outgoingQueue,
-                        cnxn.sendThread.clientTunneledAuthenticationInProgress());
+                        cnxn.sendThread.clientTunneledAuthenticationInProgress());// 从发送队列取packet
 
                 if (p != null) {
                     updateLastSend();
@@ -110,19 +110,19 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         if ((p.requestHeader != null) &&
                                 (p.requestHeader.getType() != OpCode.ping) &&
                                 (p.requestHeader.getType() != OpCode.auth)) {
-                            p.requestHeader.setXid(cnxn.getXid());
+                            p.requestHeader.setXid(cnxn.getXid());// 设置客户端的xid
                         }
-                        p.createBB();
+                        p.createBB();// 序列化
                     }
-                    sock.write(p.bb);
+                    sock.write(p.bb);// 发送
                     if (!p.bb.hasRemaining()) {
                         sentCount++;
-                        outgoingQueue.removeFirstOccurrence(p);
+                        outgoingQueue.removeFirstOccurrence(p);// 从发送队列删除
                         if (p.requestHeader != null
                                 && p.requestHeader.getType() != OpCode.ping
                                 && p.requestHeader.getType() != OpCode.auth) {
                             synchronized (pendingQueue) {
-                                pendingQueue.add(p);
+                                pendingQueue.add(p);// 加入到pendingQueue队列
                             }
                         }
                     }
@@ -265,7 +265,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         return sock;
     }
 
-    /**
+    /** 注册selection并连接
      * register with the selection and connect
      * @param sock the {@link SocketChannel} 
      * @param addr the address of remote host
@@ -357,7 +357,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         updateNow();
         for (SelectionKey k : selected) {
             SocketChannel sc = ((SocketChannel) k.channel());
-            if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {
+            if ((k.readyOps() & SelectionKey.OP_CONNECT) != 0) {// 如果之前连接没有立马连上,则在这里处理OP_CONNECT事件
                 if (sc.finishConnect()) {
                     updateLastSendAndHeard();
                     sendThread.primeConnection();
@@ -369,7 +369,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sendThread.getZkState().isConnected()) {
             synchronized(outgoingQueue) {
                 if (findSendablePacket(outgoingQueue,
-                        cnxn.sendThread.clientTunneledAuthenticationInProgress()) != null) {
+                        cnxn.sendThread.clientTunneledAuthenticationInProgress()) != null) {// 队列中有发送的消息,开启写
                     enableWrite();
                 }
             }
