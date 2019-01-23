@@ -642,7 +642,7 @@ public class ClientCnxn {
           }
        }
     }
-
+    /**packet包 处理完成*/
     private void finishPacket(Packet p) {
         if (p.watchRegistration != null) {
             p.watchRegistration.register(p.replyHeader.getErr());
@@ -658,7 +658,7 @@ public class ClientCnxn {
             eventThread.queuePacket(p);
         }
     }
-
+    /**连接丢包*/
     private void conLossPacket(Packet p) {
         if (p.replyHeader == null) {
             return;
@@ -731,7 +731,7 @@ public class ClientCnxn {
         private final ClientCnxnSocket clientCnxnSocket;
         private Random r = new Random(System.nanoTime());        
         private boolean isFirstConnect = true;
-
+        /**读取响应*/
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
             ByteBufferInputStream bbis = new ByteBufferInputStream(
                     incomingBuffer);
@@ -764,7 +764,7 @@ public class ClientCnxn {
                 return;
             }
             if (replyHdr.getXid() == -1) {
-                // -1 means notification
+                // -1 means notification -1表示通知
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got notification sessionid:0x"
                         + Long.toHexString(sessionId));
@@ -791,14 +791,14 @@ public class ClientCnxn {
                     LOG.debug("Got " + we + " for sessionid 0x"
                             + Long.toHexString(sessionId));
                 }
-
+                // 入事件队列
                 eventThread.queueEvent( we );
                 return;
             }
 
             // If SASL authentication is currently in progress, construct and
             // send a response packet immediately, rather than queuing a
-            // response as with other packets.
+            // response as with other packets.如果当前正在进行SASL身份验证，立即构造并发送响应数据包，而不是像其他数据包一样排队响应。
             if (clientTunneledAuthenticationInProgress()) {
                 GetSASLRequest request = new GetSASLRequest();
                 request.deserialize(bbia,"token");
@@ -808,12 +808,12 @@ public class ClientCnxn {
             }
 
             Packet packet;
-            synchronized (pendingQueue) {
+            synchronized (pendingQueue) {// pendingQueue是已发送并正在等待响应的数据包
                 if (pendingQueue.size() == 0) {
                     throw new IOException("Nothing in the queue, but got "
                             + replyHdr.getXid());
                 }
-                packet = pendingQueue.remove();// 由于client和server都是单线程处理,多队列处理.所以认为全局有序
+                packet = pendingQueue.remove();// 从queue中移除掉.由于client和server都是单线程处理,多队列处理.所以认为全局有序
             }
             /*
              * Since requests are processed in order, we better get a response
@@ -839,7 +839,7 @@ public class ClientCnxn {
                     lastZxid = replyHdr.getZxid();
                 }
                 if (packet.response != null && replyHdr.getErr() == 0) {
-                    packet.response.deserialize(bbia, "response");
+                    packet.response.deserialize(bbia, "response");// 反序列化response
                 }
 
                 if (LOG.isDebugEnabled()) {
@@ -874,7 +874,7 @@ public class ClientCnxn {
         ClientCnxnSocket getClientCnxnSocket() {
             return clientCnxnSocket;
         }
-
+        /**注入连接*/
         void primeConnection() throws IOException {
             LOG.info("Socket connection established to "
                      + clientCnxnSocket.getRemoteSocketAddress()
@@ -1112,7 +1112,7 @@ public class ClientCnxn {
                         LOG.warn(warnInfo);
                         throw new SessionTimeoutException(warnInfo);
                     }
-                    if (state.isConnected()) {
+                    if (state.isConnected()) {// 已建立连接
                     	//1000(1 second) is to prevent race condition missing to send the second ping
                     	//also make sure not to send too many pings when readTimeout is small 
                         int timeToNextPing = readTimeout / 2 - clientCnxnSocket.getIdleSend() - 

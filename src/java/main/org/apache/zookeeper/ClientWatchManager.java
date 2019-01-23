@@ -23,7 +23,7 @@ import java.util.Set;
 /**
  */
 public interface ClientWatchManager {
-    /**
+    /** 该方法表示事件发生时,返回需要被通知的Watcher集合,可能为空集合
      * Return a set of watchers that should be notified of the event. The 
      * manager must not notify the watcher(s), however it will update it's 
      * internal structure as if the watches had triggered. The intent being 

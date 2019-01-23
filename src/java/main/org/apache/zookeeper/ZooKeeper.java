@@ -88,7 +88,7 @@ import java.util.*;
 public class ZooKeeper {
 
     public static final String ZOOKEEPER_CLIENT_CNXN_SOCKET = "zookeeper.clientCnxnSocket";
-
+    // 用来管理客户端与服务端的连接
     protected final ClientCnxn cnxn;
     private static final Logger LOG;
     static {
@@ -232,21 +232,21 @@ public class ZooKeeper {
         }
     }
 
-    /**
+    /** 抽象类，用作 watch注册
      * Register a watcher for a particular path.
      */
     abstract class WatchRegistration {
         private Watcher watcher;
-        private String clientPath;
+        private String clientPath;// 客户端路径
         public WatchRegistration(Watcher watcher, String clientPath)
         {
             this.watcher = watcher;
             this.clientPath = clientPath;
         }
-
+        /** 获取路径到 Watchers集合的键值对，由子类实现*/
         abstract protected Map<String, Set<Watcher>> getWatches(int rc);
 
-        /**
+        /** 注册
          * Register the watcher with the set of watches on path.
          * @param rc the result code of the operation that attempted to
          * add the watch on the path.
@@ -255,12 +255,12 @@ public class ZooKeeper {
             if (shouldAddWatch(rc)) {
                 Map<String, Set<Watcher>> watches = getWatches(rc);
                 synchronized(watches) {
-                    Set<Watcher> watchers = watches.get(clientPath);
+                    Set<Watcher> watchers = watches.get(clientPath);// 通过路径获取watcher集合
                     if (watchers == null) {
                         watchers = new HashSet<Watcher>();
                         watches.put(clientPath, watchers);
                     }
-                    watchers.add(watcher);
+                    watchers.add(watcher);// 添加至watchers集合
                 }
             }
         }
@@ -276,7 +276,7 @@ public class ZooKeeper {
     }
 
     /** Handle the special case of exists watches - they add a watcher
-     * even in the case where NONODE result code is returned.
+     * even in the case where NONODE result code is returned.存在性 watch注册
      */
     class ExistsWatchRegistration extends WatchRegistration {
         public ExistsWatchRegistration(Watcher watcher, String clientPath) {
@@ -285,15 +285,15 @@ public class ZooKeeper {
 
         @Override
         protected Map<String, Set<Watcher>> getWatches(int rc) {
-            return rc == 0 ?  watchManager.dataWatches : watchManager.existWatches;
+            return rc == 0 ?  watchManager.dataWatches : watchManager.existWatches;// 根据rc是否为0确定返回dataWatches或existsWatches
         }
 
         @Override
         protected boolean shouldAddWatch(int rc) {
-            return rc == 0 || rc == KeeperException.Code.NONODE.intValue();
+            return rc == 0 || rc == KeeperException.Code.NONODE.intValue();// 判断rc是否为0或者rc是否等于NONODE的值
         }
     }
-
+    /**数据watch注册*/
     class DataWatchRegistration extends WatchRegistration {
         public DataWatchRegistration(Watcher watcher, String clientPath) {
             super(watcher, clientPath);
@@ -304,7 +304,7 @@ public class ZooKeeper {
             return watchManager.dataWatches;
         }
     }
-
+    /**子节点 watch注册*/
     class ChildWatchRegistration extends WatchRegistration {
         public ChildWatchRegistration(Watcher watcher, String clientPath) {
             super(watcher, clientPath);
@@ -315,23 +315,23 @@ public class ZooKeeper {
             return watchManager.childWatches;
         }
     }
-
+    /**枚举类型，表示服务器的状态*/
     @InterfaceAudience.Public
     public enum States {
         CONNECTING, ASSOCIATING, CONNECTED, CONNECTEDREADONLY,
-        CLOSED, AUTH_FAILED, NOT_CONNECTED;
-
+        CLOSED, AUTH_FAILED, NOT_CONNECTED;// 代表服务器的状态
+        // 是否存活
         public boolean isAlive() {
-            return this != CLOSED && this != AUTH_FAILED;
+            return this != CLOSED && this != AUTH_FAILED;// 不为关闭状态并且未认证失败
         }
 
-        /**
+        /**是否连接
          * Returns whether we are connected to a server (which
          * could possibly be read-only, if this client is allowed
          * to go to read-only mode)
          * */
         public boolean isConnected() {
-            return this == CONNECTED || this == CONNECTEDREADONLY;
+            return this == CONNECTED || this == CONNECTEDREADONLY;// 已连接或者只读连接
         }
     }
 
@@ -441,17 +441,17 @@ public class ZooKeeper {
     {
         LOG.info("Initiating client connection, connectString=" + connectString
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
-
+        // 初始化默认Watcher
         watchManager.defaultWatcher = watcher;
-
+        // 对传入的connectString进行解析
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
         HostProvider hostProvider = new StaticHostProvider(
-                connectStringParser.getServerAddresses());
+                connectStringParser.getServerAddresses());// 根据服务器地址列表生成HostProvider
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
-                getClientCnxnSocket(), canBeReadOnly);
-        cnxn.start();
+                getClientCnxnSocket(), canBeReadOnly); // 生成客户端管理
+        cnxn.start();// 启动
     }
 
     /**
@@ -1837,16 +1837,16 @@ public class ZooKeeper {
     protected SocketAddress testableLocalSocketAddress() {
         return cnxn.sendThread.getClientCnxnSocket().getLocalSocketAddress();
     }
-
+    /**利用反射创建ClientCnxnSocketNIO实例*/
     private static ClientCnxnSocket getClientCnxnSocket() throws IOException {
         String clientCnxnSocketName = System
-                .getProperty(ZOOKEEPER_CLIENT_CNXN_SOCKET);
+                .getProperty(ZOOKEEPER_CLIENT_CNXN_SOCKET);// 查看是否在系统属性中进行了设置
         if (clientCnxnSocketName == null) {
-            clientCnxnSocketName = ClientCnxnSocketNIO.class.getName();
+            clientCnxnSocketName = ClientCnxnSocketNIO.class.getName();// 若未进行设置，取得ClientCnxnSocketNIO的类名
         }
         try {
             return (ClientCnxnSocket) Class.forName(clientCnxnSocketName).getDeclaredConstructor()
-                    .newInstance();
+                    .newInstance();// 使用反射新生成实例然后返回
         } catch (Exception e) {
             IOException ioe = new IOException("Couldn't instantiate "
                     + clientCnxnSocketName);

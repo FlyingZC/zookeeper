@@ -313,7 +313,10 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
     <target name="jute" depends="init">
         <javac srcdir="${java.src.dir}" destdir="${build.classes}" includeantruntime="false"
             target="${javac.target}" source="${javac.source}"
-            includes="org/apache/jute/**" debug="on" classpath="${ivy.lib}/audience-annotations-${audience-annotations.version}.jar" />
+            includes="org/apache/jute/**" debug="on" classpath="${ivy.lib}/audience-annotations-${audience-annotations.version}.jar" >
+                <!--给编译器指定编码，防止出现："警告： 编码 GBK 的不可映射字符"-->
+                <compilerarg line="-encoding UTF-8 "/>   
+            </javac>
     </target>
 
     <target name="compile_jute_uptodate">
@@ -459,6 +462,8 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
             <classpath refid="java.classpath"/>
             <compilerarg value="-Xlint:all"/>
             <compilerarg value="-Xlint:-path"/>
+            <!--给编译器指定编码，防止出现："警告： 编码 GBK 的不可映射字符"-->
+            <compilerarg line="-encoding UTF-8 "/>   
         </javac>
     </target>
 
@@ -466,6 +471,8 @@ xmlns:cs="antlib:com.puppycrawl.tools.checkstyle">
       <mkdir dir="${test.java.classes}"/>
       <javac srcdir="${test.src.dir}" destdir="${test.java.classes}" includeantruntime="false"
              target="${javac.target}" source="${javac.source}" debug="on">
+        <!--给编译器指定编码，防止出现："警告： 编码 GBK 的不可映射字符"-->
+        <compilerarg line="-encoding UTF-8 "/>   
         <classpath refid="test.java.classpath"/>
       </javac>
       <javac srcdir="${systest.src.dir}" destdir="${test.java.classes}" includeantruntime="false"

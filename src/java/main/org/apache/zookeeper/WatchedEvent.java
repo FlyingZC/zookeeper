@@ -30,9 +30,9 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  */
 @InterfaceAudience.Public
 public class WatchedEvent {
-    final private KeeperState keeperState;
-    final private EventType eventType;
-    private String path;
+    final private KeeperState keeperState;// Zookeeper的状态
+    final private EventType eventType;// 事件类型
+    private String path;// 事件所涉及节点的路径
     
     /**
      * Create a WatchedEvent with specified type, state and path
@@ -47,7 +47,7 @@ public class WatchedEvent {
      * Convert a WatcherEvent sent over the wire into a full-fledged WatcherEvent
      */
     public WatchedEvent(WatcherEvent eventMessage) {
-        keeperState = KeeperState.fromInt(eventMessage.getState());
+        keeperState = KeeperState.fromInt(eventMessage.getState());// 从eventMessage中取出相应属性进行赋值
         eventType = EventType.fromInt(eventMessage.getType());
         path = eventMessage.getPath();
     }

@@ -31,19 +31,19 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 
-/**
+/** WatcherManager类用于管理watchers和相应的触发器
  * This class manages watches. It allows watches to be associated with a string
  * and removes watchers and their watches in addition to managing triggers.
  */
 public class WatchManager {
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
-
+    // watcher列表
     private final HashMap<String, HashSet<Watcher>> watchTable =
         new HashMap<String, HashSet<Watcher>>();
-
+    // watcher到节点路径的映射
     private final HashMap<Watcher, HashSet<String>> watch2Paths =
         new HashMap<Watcher, HashSet<String>>();
-
+    /**获取watchTable的大小,线程安全*/
     public synchronized int size(){
         int result = 0;
         for(Set<Watcher> watches : watchTable.values()) {
@@ -51,7 +51,7 @@ public class WatchManager {
         }
         return result;
     }
-
+    /**添加watcher*/
     public synchronized void addWatch(String path, Watcher watcher) {
         HashSet<Watcher> list = watchTable.get(path);
         if (list == null) {
@@ -71,7 +71,7 @@ public class WatchManager {
         }
         paths.add(path);
     }
-
+    /**移除watcher*/
     public synchronized void removeWatcher(Watcher watcher) {
         HashSet<String> paths = watch2Paths.remove(watcher);
         if (paths == null) {
@@ -94,7 +94,7 @@ public class WatchManager {
 
     public Set<Watcher> triggerWatch(String path, EventType type, Set<Watcher> supress) {
         WatchedEvent e = new WatchedEvent(type,
-                KeeperState.SyncConnected, path);
+                KeeperState.SyncConnected, path);// 根据事件类型、连接状态、节点路径创建WatchedEvent
         HashSet<Watcher> watchers;
         synchronized (this) {
             watchers = watchTable.remove(path);
@@ -117,7 +117,7 @@ public class WatchManager {
             if (supress != null && supress.contains(w)) {
                 continue;
             }
-            w.process(e);
+            w.process(e);// 进行事件处理
         }
         return watchers;
     }
@@ -141,7 +141,7 @@ public class WatchManager {
         return sb.toString();
     }
 
-    /**
+    /** 作将watchTable或watch2Paths写入磁盘
      * String representation of watches. Warning, may be large!
      * @param byPath iff true output watches by paths, otw output
      * watches by connection

@@ -79,7 +79,7 @@ public class FastLeaderElection implements Election {
     QuorumCnxManager manager;
 
 
-    /** 通知(Notifications)是允许其他 对等方(server) 知道给定 对等方 已 更改其投票 的消息
+    /** 表示收到的选举投票信息（其他服务器发来的选举投票信息）. 通知(Notifications)是允许其他 对等方(server) 知道给定 对等方 已 更改其投票 的消息
      * Notifications are messages that let other peers know that
      * a given peer has changed its vote, either because it has
      * joined leader election or because it learned of another
@@ -257,7 +257,7 @@ public class FastLeaderElection implements Election {
                          * learner in the future, we'll have to change the
                          * way we check for observers.
                          */
-                        if(!validVoter(response.sid)){
+                        if(!validVoter(response.sid)){// 当前的投票者集合不包含此sid的服务器
                             Vote current = self.getCurrentVote();// 获取自己的投票
                             ToSend notmsg = new ToSend(ToSend.mType.notification,
                                     current.getId(),
@@ -268,14 +268,14 @@ public class FastLeaderElection implements Election {
                                     current.getPeerEpoch());// 构造ToSend消息
 
                             sendqueue.offer(notmsg);// 放入sendqueue队列,等待发送
-                        } else {// 有投票权的server
+                        } else {// 有投票权的server.包含此sid的服务器，表示接收到该服务器的选票消息
                             // Receive new message
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("Receive new notification message. My id = "
                                         + self.getId());
                             }
 
-                            /*
+                            /* 检查向后兼容性
                              * We check for 28 bytes for backward compatibility
                              */
                             if (response.buffer.capacity() < 28) {
@@ -283,13 +283,13 @@ public class FastLeaderElection implements Election {
                                         + response.buffer.capacity());
                                 continue;
                             }
-                            boolean backCompatibility = (response.buffer.capacity() == 28);
+                            boolean backCompatibility = (response.buffer.capacity() == 28);// 若容量为28，则表示可向后兼容
                             response.buffer.clear();
 
-                            // Instantiate Notification and set its attributes
+                            // Instantiate Notification and set its attributes 创建接收通知
                             Notification n = new Notification();
                             
-                            // State of peer that sent this message
+                            // State of peer that sent this message  推选者的状态
                             QuorumPeer.ServerState ackstate = QuorumPeer.ServerState.LOOKING;
                             switch (response.buffer.getInt()) {
                             case 0:
@@ -313,16 +313,16 @@ public class FastLeaderElection implements Election {
                             n.electionEpoch = response.buffer.getLong();
                             n.state = ackstate;
                             n.sid = response.sid;
-                            if(!backCompatibility){
+                            if(!backCompatibility){// 不向后兼容
                                 n.peerEpoch = response.buffer.getLong();
-                            } else {
+                            } else {// 向后兼容
                                 if(LOG.isInfoEnabled()){
                                     LOG.info("Backward compatibility mode, server id=" + n.sid);
                                 }
-                                n.peerEpoch = ZxidUtils.getEpochFromZxid(n.zxid);
+                                n.peerEpoch = ZxidUtils.getEpochFromZxid(n.zxid);// 获取选举周期
                             }
 
-                            /*
+                            /* 确定版本号
                              * Version added in 3.4.6
                              */
 
@@ -336,7 +336,7 @@ public class FastLeaderElection implements Election {
                                 printNotification(n);
                             }
 
-                            /* 如果此服务器处于looking状态,则发送leader投票
+                            /* 如果本服务器处于looking状态,则发送leader投票
                              * If this server is looking, then send proposed leader
                              */
 
@@ -376,7 +376,7 @@ public class FastLeaderElection implements Election {
                                     }
                                     
                                     ToSend notmsg;
-                                    if(n.version > 0x0) {
+                                    if(n.version > 0x0) {// 版本号大于0
                                         notmsg = new ToSend(
                                                 ToSend.mType.notification,
                                                 current.getId(),
@@ -1010,6 +1010,6 @@ public class FastLeaderElection implements Election {
      * @return boolean
      */
     private boolean validVoter(long sid) {
-        return self.getVotingView().containsKey(sid);
+        return self.getVotingView().containsKey(sid);// 当前的投票者集合 包含此sid服务器
     }
 }

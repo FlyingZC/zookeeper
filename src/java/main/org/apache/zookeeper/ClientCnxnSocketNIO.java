@@ -53,7 +53,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         return sockKey != null;
     }
     
-    /**
+    /** 向服务端发送消息(isWritable) 或 从服务端读取返回的消息(isReadable)
      * @return true if a packet was received
      * @throws InterruptedException
      * @throws IOException
@@ -127,7 +127,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         }
                     }
                 }
-                if (outgoingQueue.isEmpty()) {
+                if (outgoingQueue.isEmpty()) {// outgoingQueue队列已空
                     // No more packets to send: turn off write interest flag.
                     // Will be turned on later by a later call to enableWrite(),
                     // from within ZooKeeperSaslClient (if client is configured
@@ -362,7 +362,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     updateLastSendAndHeard();
                     sendThread.primeConnection();
                 }
-            } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+            } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {// 读写事件
                 doIO(pendingQueue, outgoingQueue, cnxn);
             }
         }
@@ -396,7 +396,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     public synchronized void disableWrite() {
         int i = sockKey.interestOps();
         if ((i & SelectionKey.OP_WRITE) != 0) {
-            sockKey.interestOps(i & (~SelectionKey.OP_WRITE));
+            sockKey.interestOps(i & (~SelectionKey.OP_WRITE));// 取消 对写事件感兴趣
         }
     }
 
