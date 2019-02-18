@@ -102,7 +102,7 @@ public class ObserverZooKeeperServer extends LearnerZooKeeperServer {
         commitProcessor = new CommitProcessor(finalProcessor,
                 Long.toString(getServerId()), true,
                 getZooKeeperServerListener());
-        commitProcessor.start();
+        commitProcessor.start();// ObserverRequestProcessor => CommitProcessor(线程)  =>FinalRequestProcessor（线程）
         firstProcessor = new ObserverRequestProcessor(this, commitProcessor);
         ((ObserverRequestProcessor) firstProcessor).start();
 
@@ -116,7 +116,7 @@ public class ObserverZooKeeperServer extends LearnerZooKeeperServer {
          */
         if (syncRequestProcessorEnabled) {
             syncProcessor = new SyncRequestProcessor(this, null);
-            syncProcessor.start();
+            syncProcessor.start();//  SyncRequestProcessor
         }
     }
 

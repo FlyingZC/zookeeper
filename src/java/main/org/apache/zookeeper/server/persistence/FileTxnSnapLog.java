@@ -176,7 +176,7 @@ public class FileTxnSnapLog {
         return fastForwardFromEdits(dt, sessions, listener);
     }
 
-    /**
+    /** 读取事务日志
      * This function will fast forward the server database to have the latest
      * transactions in it.  This is the same as restore, but only reads from
      * the transaction logs and not restores from a snapshot.
@@ -249,7 +249,7 @@ public class FileTxnSnapLog {
                                 + " with timeout: "
                                 + ((CreateSessionTxn) txn).getTimeOut());
             }
-            // give dataTree a chance to sync its lastProcessedZxid
+            // give dataTree a chance to sync its lastProcessedZxid 让dataTree有机会同步它的lastProcessedZxid
             rc = dt.processTxn(hdr, txn);
             break;
         case OpCode.closeSession:

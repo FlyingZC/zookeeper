@@ -80,9 +80,9 @@ public class Follower extends Learner{
                             + " is less than our accepted epoch " + ZxidUtils.zxidToString(self.getAcceptedEpoch()));
                     throw new IOException("Error: Epoch of leader is lower");
                 }
-                syncWithLeader(newEpochZxid);                
+                syncWithLeader(newEpochZxid);// 启动时首先与 Leader同步数据
                 QuorumPacket qp = new QuorumPacket();
-                while (this.isRunning()) {
+                while (this.isRunning()) {// 启动 while循环等待 Peer的 QuorumPacket包，调用 processPacket方法处理这些包
                     readPacket(qp);
                     processPacket(qp);
                 }
@@ -102,7 +102,7 @@ public class Follower extends Learner{
         }
     }
 
-    /**
+    /** 处理 QuorumPeer传送的 QuorumPacket
      * Examine the packet received in qp and dispatch based on its contents.
      * @param qp
      * @throws IOException
@@ -112,8 +112,8 @@ public class Follower extends Learner{
         case Leader.PING:            
             ping(qp);            
             break;
-        case Leader.PROPOSAL:            
-            TxnHeader hdr = new TxnHeader();
+        case Leader.PROPOSAL: // Leader将要执行的写事务命令,Follower只有在收到 COMMIT消息时才真正执行 PROPOSAL命令
+            TxnHeader hdr = new TxnHeader();// 同一个写事务命令会在Leader和多个Follower上都执行一次，保证集群数据的一致性
             Record txn = SerializeUtils.deserializeTxn(qp.getData(), hdr);
             if (hdr.getZxid() != lastQueued + 1) {
                 LOG.warn("Got zxid 0x"
@@ -124,7 +124,7 @@ public class Follower extends Learner{
             lastQueued = hdr.getZxid();
             fzk.logRequest(hdr, txn);
             break;
-        case Leader.COMMIT:
+        case Leader.COMMIT: // 提交命令
             fzk.commit(qp.getZxid());
             break;
         case Leader.UPTODATE:

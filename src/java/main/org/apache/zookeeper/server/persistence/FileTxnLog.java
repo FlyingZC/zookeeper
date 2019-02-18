@@ -348,7 +348,7 @@ public class FileTxnLog implements TxnLog {
         }
     }
 
-    /**
+    /** 开始读取给定zxid中的所有事务
      * start reading all the transactions from the given zxid
      * @param zxid the zxid to start reading transactions from
      * @return returns an iterator to iterate through the transaction
@@ -540,10 +540,10 @@ public class FileTxnLog implements TxnLog {
             storedFiles = new ArrayList<File>();
             List<File> files = Util.sortDataDir(FileTxnLog.getLogFiles(logDir.listFiles(), 0), LOG_FILE_PREFIX, false);
             for (File f: files) {
-                if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) >= zxid) {
+                if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) >= zxid) {// 添加大于于zxid的所有日志文件
                     storedFiles.add(f);
                 }
-                // add the last logfile that is less than the zxid
+                // add the last logfile that is less than the zxid 添加小于zxid的最后一个日志文件
                 else if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) < zxid) {
                     storedFiles.add(f);
                     break;
@@ -590,7 +590,7 @@ public class FileTxnLog implements TxnLog {
             }
         }
 
-        /**
+        /** 读取事务文件
          * Invoked to indicate that the input stream has been created.
          * @param ia input archive
          * @param is file input stream associated with the input archive.

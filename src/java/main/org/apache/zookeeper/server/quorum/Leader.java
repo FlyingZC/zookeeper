@@ -214,22 +214,22 @@ public class Leader {
         this.zk=zk;
     }
 
-    /**
+    /** 用于事务同步，Leader发给Follower
      * This message is for follower to expect diff
      */
     final static int DIFF = 13;
     
-    /**
+    /** 用于事务同步，Leader发给Follower
      * This is for follower to truncate its logs 
      */
     final static int TRUNC = 14;
     
-    /**
+    /** 用于事务同步，Leader发给Follower
      * This is for follower to download the snapshots
      */
     final static int SNAP = 15;
     
-    /**
+    /** Observer信息
      * This tells the leader that the connecting peer is actually an observer
      */
     final static int OBSERVERINFO = 16;
@@ -240,7 +240,7 @@ public class Leader {
      */
     final static int NEWLEADER = 10;
 
-    /**
+    /** Follower信息
      * This message type is sent by a follower to pass the last zxid. This is here
      * for backward compatibility purposes.
      */
@@ -258,7 +258,7 @@ public class Leader {
      */
     public static final int LEADERINFO = 17;
 
-    /**
+    /** Epoch确认，Follower发给Leader
      * This message is used by the follow to ack a proposed epoch.
      */
     public static final int ACKEPOCH = 18;
@@ -269,17 +269,17 @@ public class Leader {
      */
     final static int REQUEST = 1;
 
-    /**
+    /** 写事务请求，Leader发给Follower，收到COMMIT后执行
      * This message type is sent by a leader to propose a mutation.
      */
     public final static int PROPOSAL = 2;
 
-    /**
+    /** 确认包，Follower发给Leader
      * This message type is sent by a follower after it has synced a proposal.
      */
     final static int ACK = 3;
 
-    /**
+    /** 提交事务，Leader发给Follower包
      * This message type is sent by a leader to commit a proposal and cause
      * followers to start serving the corresponding data.
      */
@@ -333,7 +333,7 @@ public class Leader {
 
                         BufferedInputStream is = new BufferedInputStream(
                                 s.getInputStream());
-                        LearnerHandler fh = new LearnerHandler(s, is, Leader.this);
+                        LearnerHandler fh = new LearnerHandler(s, is, Leader.this);// 为每个Socket创建 LearnerHandler，处理Follower注册过程
                         fh.start();
                     } catch (SocketException e) {
                         if (stop) {
@@ -385,18 +385,18 @@ public class Leader {
 
         try {
             self.tick.set(0);
-            zk.loadData();
+            zk.loadData();// 从磁盘中恢复数据和session列表
             
             leaderStateSummary = new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from 
-            // new followers.
+            // new followers.启动监听线程LearnerCnxAcceptor 等待新的followers的连接请求
             cnxAcceptor = new LearnerCnxAcceptor();
-            cnxAcceptor.start();
+            cnxAcceptor.start();// cnxAcceptor线程会为每个Follower的连接建立一个LearnerHandler,用于和Follower做交互
             
             readyToStart = true;
-            long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
-            
+            long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());// 启用新的epoch
+            // zookeeper中的zxid是64位，用于唯一标示一个操作,zxid的高32位是epoch，每次Leader切换加1，低32位为序列号，每次操作加1
             zk.setZxid(ZxidUtils.makeZxid(epoch, 0));
             
             synchronized(this){
@@ -404,7 +404,7 @@ public class Leader {
             }
             
             newLeaderProposal.packet = new QuorumPacket(NEWLEADER, zk.getZxid(),
-                    null, null);
+                    null, null);// 向所有的Follower发送一个NEWLEADER包,宣告自己的Leader身份
 
 
             if ((newLeaderProposal.packet.getZxid() & 0xffffffffL) != 0) {
@@ -419,7 +419,7 @@ public class Leader {
             // us. We do this by waiting for the NEWLEADER packet to get
             // acknowledged
             try {
-                waitForNewLeaderAck(self.getId(), zk.getZxid());
+                waitForNewLeaderAck(self.getId(), zk.getZxid());// 并在initLimit时间内等待大多数的Follower完成和Leader的同步，并发送ACK包，表示Follower已经和Leader完成同步并可以对外提供服务
             } catch (InterruptedException e) {
                 shutdown("Waiting for a quorum of followers, only synced with sids: [ "
                         + getSidSetString(newLeaderProposal.ackSet) + " ]");
@@ -470,7 +470,7 @@ public class Leader {
             // iteration
             boolean tickSkip = true;
     
-            while (true) {
+            while (true) {// QuromPeer线程在每个tickTime中都会发送ping消息给其他的follower
                 Thread.sleep(self.tickTime / 2);
                 if (!tickSkip) {
                     self.tick.incrementAndGet();
@@ -486,7 +486,7 @@ public class Leader {
                     if (f.synced() && f.getLearnerType() == LearnerType.PARTICIPANT) {
                         syncedSet.add(f.getSid());
                     }
-                    f.ping();
+                    f.ping();// ping
                 }
 
                 // check leader running status
@@ -876,23 +876,23 @@ public class Leader {
                 epoch = lastAcceptedEpoch+1;
             }
             if (isParticipant(sid)) {
-                connectingFollowers.add(sid);
+                connectingFollowers.add(sid);// 将自己加入连接集合中,方便后续判断leader是否有效
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
             if (connectingFollowers.contains(self.getId()) && 
-                                            verifier.containsQuorum(connectingFollowers)) {
+                                            verifier.containsQuorum(connectingFollowers)) {// 若有足够多的follower进入，选举有效，则无需等待，并通知其他的等待线程，类似于Barrier
                 waitingForNewEpoch = false;
                 self.setAcceptedEpoch(epoch);
-                connectingFollowers.notifyAll();
-            } else {
+                connectingFollowers.notifyAll();// 唤醒阻塞在connectingFollowers这个同步监视器上的其他线程
+            } else {// 若进入的follower不够,则进入等待,超时即为initLimit时间
                 long start = Time.currentElapsedTime();
                 long cur = start;
                 long end = start + self.getInitLimit()*self.getTickTime();
                 while(waitingForNewEpoch && cur < end) {
-                    connectingFollowers.wait(end - cur);
+                    connectingFollowers.wait(end - cur);// wait期间,释放掉connectingFollowers锁,其他线程有机会执行本方法
                     cur = Time.currentElapsedTime();
                 }
-                if (waitingForNewEpoch) {
+                if (waitingForNewEpoch) {// 超时了,退出lead过程,重新发起选举
                     throw new InterruptedException("Timeout while waiting for epoch from quorum");        
                 }
             }
@@ -921,7 +921,7 @@ public class Leader {
                 }
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
-            if (electingFollowers.contains(self.getId()) && verifier.containsQuorum(electingFollowers)) {
+            if (electingFollowers.contains(self.getId()) && verifier.containsQuorum(electingFollowers)) {// 判断是否满足选举条件,如果不满足进入等待,满足则通知其他等待线程,类似于Barrier
                 electionFinished = true;
                 electingFollowers.notifyAll();
             } else {                
@@ -978,7 +978,7 @@ public class Leader {
         zk.getZKDatabase().setlastProcessedZxid(zk.getZxid());
     }
 
-    /**
+    /** 等待leader收到足够的followers对于NEWLEADER的acks
      * Process NEWLEADER ack of a given sid and wait until the leader receives
      * sufficient acks.
      *

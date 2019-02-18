@@ -38,7 +38,7 @@ import org.apache.zookeeper.jmx.MBeanRegistry;
 import org.apache.zookeeper.server.auth.SaslServerCallbackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+/**server连接工厂*/
 public abstract class ServerCnxnFactory {
 
     public static final String ZOOKEEPER_SERVER_CNXN_FACTORY = "zookeeper.serverCnxnFactory";
@@ -96,7 +96,7 @@ public abstract class ServerCnxnFactory {
     public abstract void start();
 
     protected ZooKeeperServer zkServer;
-    final public void setZooKeeperServer(ZooKeeperServer zk) {
+    final public void setZooKeeperServer(ZooKeeperServer zk) {// 设置 zkServer和 serverCnxnFactory的关联
         this.zkServer = zk;
         if (zk != null) {
             zk.setServerCnxnFactory(this);
@@ -108,7 +108,7 @@ public abstract class ServerCnxnFactory {
     static public ServerCnxnFactory createFactory() throws IOException {
         String serverCnxnFactoryName =
             System.getProperty(ZOOKEEPER_SERVER_CNXN_FACTORY);
-        if (serverCnxnFactoryName == null) {
+        if (serverCnxnFactoryName == null) {// 默认使用 NIOServerCnxnFactory
             serverCnxnFactoryName = NIOServerCnxnFactory.class.getName();
         }
         try {
@@ -168,7 +168,7 @@ public abstract class ServerCnxnFactory {
         sessionMap.put(sessionId, cnxn);
     }
 
-    /**
+    /** 如果指定，则初始化服务器SASL
      * Initialize the server SASL if specified.
      *
      * If the user has specified a "ZooKeeperServer.LOGIN_CONTEXT_NAME_KEY"

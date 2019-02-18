@@ -52,7 +52,7 @@ public class Observer extends Learner{
         return sb.toString();
     }
     
-    /**
+    /** 不参与选举
      * the main method called by the observer to observe the leader
      *
      * @throws InterruptedException
@@ -64,12 +64,12 @@ public class Observer extends Learner{
             QuorumServer leaderServer = findLeader();
             LOG.info("Observing " + leaderServer.addr);
             try {
-                connectToLeader(leaderServer.addr, leaderServer.hostname);
+                connectToLeader(leaderServer.addr, leaderServer.hostname);// 先注册到Leader
                 long newLeaderZxid = registerWithLeader(Leader.OBSERVERINFO);
 
-                syncWithLeader(newLeaderZxid);
+                syncWithLeader(newLeaderZxid);// 事务同步
                 QuorumPacket qp = new QuorumPacket();
-                while (this.isRunning()) {
+                while (this.isRunning()) {// 循环处理 QuorumPacket包
                     readPacket(qp);
                     processPacket(qp);                   
                 }
@@ -89,7 +89,7 @@ public class Observer extends Learner{
         }
     }
     
-    /**
+    /** 处理packet,主要处理 INFORM包来执行 Leader的写请求命令
      * Controls the response of an observer to the receipt of a quorumpacket
      * @param qp
      * @throws IOException
@@ -114,7 +114,7 @@ public class Observer extends Learner{
         case Leader.SYNC:
             ((ObserverZooKeeperServer)zk).sync();
             break;
-        case Leader.INFORM:            
+        case Leader.INFORM: // 执行Leader的写请求命令.Leader群发写事务时，给Follower发的是PROPOSAL并要等待Follower确认；而给Observer发的则是INFORM消息并且不需要Obverver回复ACK消息来确认。
             TxnHeader hdr = new TxnHeader();
             Record txn = SerializeUtils.deserializeTxn(qp.getData(), hdr);
             Request request = new Request (null, hdr.getClientId(), 

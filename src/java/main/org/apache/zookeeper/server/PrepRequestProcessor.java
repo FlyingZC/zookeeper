@@ -70,7 +70,7 @@ import org.apache.zookeeper.txn.Txn;
 import org.apache.zookeeper.txn.MultiTxn;
 import org.apache.zookeeper.txn.TxnHeader;
 
-/**
+/** 对请求进行预处理,将client向server请求二进制数据反序列化成sever中请求的操作
  * This request processor is generally at the start of a RequestProcessor
  * change. It sets up any transactions associated with requests that change the
  * state of the system. It counts on ZooKeeperServer to update
@@ -534,7 +534,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         request.txn = null;
         
         try {
-            switch (request.type) {
+            switch (request.type) {// 对于事务请求,不同类型请求对应不同操作
                 case OpCode.create:
                 CreateRequest createRequest = new CreateRequest();
                 pRequest2Txn(request.type, zks.getNextZxid(), request, createRequest, true);
@@ -629,7 +629,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 pRequest2Txn(request.type, zks.getNextZxid(), request, null, true);
                 break;
  
-            //All the rest don't need to create a Txn - just verify session
+            //All the rest don't need to create a Txn - just verify session.所有非事务请求,此处只检查session是否超时
             case OpCode.sync:
             case OpCode.exists:
             case OpCode.getData:

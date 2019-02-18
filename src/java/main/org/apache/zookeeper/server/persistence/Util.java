@@ -264,13 +264,13 @@ public class Util {
         private static final long serialVersionUID = -2648639884525140318L;
 
         private String prefix;
-        private boolean ascending;
+        private boolean ascending;// 升序
         public DataDirFileComparator(String prefix, boolean ascending) {
             this.prefix = prefix;
             this.ascending = ascending;
         }
 
-        public int compare(File o1, File o2) {
+        public int compare(File o1, File o2) {// 比较文件名中的zxid
             long z1 = Util.getZxidFromName(o1.getName(), prefix);
             long z2 = Util.getZxidFromName(o2.getName(), prefix);
             int result = z1 < z2 ? -1 : (z1 > z2 ? 1 : 0);

@@ -70,17 +70,17 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
     }      
 
     @Override
-    protected void setupRequestProcessors() {
+    protected void setupRequestProcessors() {// 建立两个处理器链
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
         commitProcessor = new CommitProcessor(finalProcessor,
                 Long.toString(getServerId()), true,
                 getZooKeeperServerListener());
-        commitProcessor.start();
+        commitProcessor.start();//  FollowerRequestProcessor  => CommitProcessor(线程)  =>FinalRequestProcessor（线程）
         firstProcessor = new FollowerRequestProcessor(this, commitProcessor);
         ((FollowerRequestProcessor) firstProcessor).start();
         syncProcessor = new SyncRequestProcessor(this,
                 new SendAckRequestProcessor((Learner)getFollower()));
-        syncProcessor.start();
+        syncProcessor.start();// SyncRequestProcessor（线程）=> SendAckRequestProcessor
     }
 
     LinkedBlockingQueue<Request> pendingTxns = new LinkedBlockingQueue<Request>();

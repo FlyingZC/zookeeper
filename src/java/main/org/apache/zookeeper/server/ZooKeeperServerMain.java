@@ -105,7 +105,7 @@ public class ZooKeeperServerMain {
             final ZooKeeperServer zkServer = new ZooKeeperServer();
             // Registers shutdown handler which will be used to know the
             // server error or shutdown state changes.
-            final CountDownLatch shutdownLatch = new CountDownLatch(1);
+            final CountDownLatch shutdownLatch = new CountDownLatch(1);// 启动ZooKeeperServer并等待关闭事件
             zkServer.registerServerShutdownHandler(
                     new ZooKeeperServerShutdownHandler(shutdownLatch));
 

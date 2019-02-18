@@ -542,7 +542,7 @@ public class QuorumCnxManager {
      *  @param sid  server id
      */
     synchronized public void connectOne(long sid){// electionAddr 为要连接的server的ip加选举端口,如localhost/127.0.0.1:33339
-        if (!connectedToPeer(sid)){// 已经建立连接
+        if (!connectedToPeer(sid)){// 若未建立连接
             InetSocketAddress electionAddr;
             if (view.containsKey(sid)) {
                 electionAddr = view.get(sid).electionAddr;
@@ -701,7 +701,7 @@ public class QuorumCnxManager {
         connectionThreadCnt.set(0);
     }
 
-    /** 该线程监听端口.绑定地址开启ServerSocket服务,用来侦听其他server连接,进行集体间选举,投票,数据同步
+    /** 该线程监听端口.绑定地址开启ServerSocket服务,用来侦听其他server连接,进行集群间选举,投票,数据同步
      * Thread to listen on some port
      */
     public class Listener extends ZooKeeperThread {

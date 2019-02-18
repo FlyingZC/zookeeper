@@ -63,7 +63,7 @@ import org.apache.zookeeper.server.util.ZxidUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 管理选举
  * This class manages the quorum protocol. There are three states this server
  * can be in:
  * <ol>
@@ -295,7 +295,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         }
         
     }
-    /**
+    /** 组成集群的所有服务器
      * The servers that make up the cluster
      */
     protected Map<Long, QuorumServer> quorumPeers;
@@ -990,9 +990,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     break;
                 case LEADING:
                     LOG.info("LEADING");
-                    try {
-                        setLeader(makeLeader(logFactory));
-                        leader.lead();
+                    try {// Leader选举完成之后，Peer确认了自己是Leader的身份，在 QuromPeer的主线程中执行Leader的逻辑
+                        setLeader(makeLeader(logFactory));// 创建Leader对象，并创建Server绑定在QuorumAddress上，用于和其他Follower之间相互通信
+                        leader.lead();// Leader的真正的逻辑
                         setLeader(null);
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception",e);
@@ -1050,20 +1050,20 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         return Collections.unmodifiableMap(this.quorumPeers);
     }
 
-    /**
+    /** 观察者不包含在此视图中，只有PeerType = PARTICIPANT(参与者)的节点
      * Observers are not contained in this view, only nodes with 
      * PeerType=PARTICIPANT.
      */
     public Map<Long,QuorumPeer.QuorumServer> getVotingView() {
         return QuorumPeer.viewToVotingView(getView());
     }
-
+    // 过滤掉 observer
     static Map<Long,QuorumPeer.QuorumServer> viewToVotingView(
             Map<Long,QuorumPeer.QuorumServer> view) {
         Map<Long,QuorumPeer.QuorumServer> ret =
             new HashMap<Long, QuorumPeer.QuorumServer>();
         for (QuorumServer server : view.values()) {
-            if (server.type == LearnerType.PARTICIPANT) {
+            if (server.type == LearnerType.PARTICIPANT) {// 参加者
                 ret.put(server.id, server);
             }
         }

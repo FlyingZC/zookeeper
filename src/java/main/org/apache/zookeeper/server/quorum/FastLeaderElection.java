@@ -623,7 +623,7 @@ public class FastLeaderElection implements Election {
                 ((newZxid > curZxid) || ((newZxid == curZxid) && (newId > curId)))));
     }
 
-    /** 给定一组投票，返回SyncedLearnerTracker，用于确定是否足以宣布选举结束。
+    /** 给定一组投票，用于确定是否足以宣布选举结束。
      * Termination predicate. Given a set of votes, determines if
      * have sufficient to declare the end of the election round.
      *
@@ -643,11 +643,11 @@ public class FastLeaderElection implements Election {
          */
         for (Map.Entry<Long,Vote> entry : votes.entrySet()) {
             if (vote.equals(entry.getValue())){
-                set.add(entry.getKey());
+                set.add(entry.getKey());// 更新votes中的这个vote
             }
         }
 
-        return self.getQuorumVerifier().containsQuorum(set);
+        return self.getQuorumVerifier().containsQuorum(set);// 投票一致数 是否足以结束选举
     }
 
     /** 检查是否已经完成了Leader的选举
@@ -807,7 +807,7 @@ public class FastLeaderElection implements Election {
 
             synchronized(this){
                 logicalclock.incrementAndGet();// 更新逻辑时钟.每进行一轮选举,都需要更新逻辑时钟
-                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());// 更新选票
+                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());// 更新选票(选自己,sid, zxid, epoch)
             }
 
             LOG.info("New election. My id =  " + self.getId() +
@@ -834,7 +834,7 @@ public class FastLeaderElection implements Election {
                 if(n == null){// 没有接收到其他服务器发送的选票
                     if(manager.haveDelivered()){// manager已经发送了所有选票消息
                         sendNotifications();// 向所有其他服务器发送消息
-                    } else {// 还未发送所有消息
+                    } else {// 还未发送完所有选票消息
                         manager.connectAll();// 连接其他每个服务器
                     }
 
@@ -846,12 +846,12 @@ public class FastLeaderElection implements Election {
                             tmpTimeOut : maxNotificationInterval);
                     LOG.info("Notification time out: " + notTimeout);
                 }
-                else if (validVoter(n.sid) && validVoter(n.leader)) {// 投票者集合(当前服务器能看到的所有服务器集合) 中 包含 接收到消息中的服务器id 和 n.leader
+                else if (validVoter(n.sid) && validVoter(n.leader)) {//(当前 server能否看到投票的server 和 投票sever投的leader) 投票者集合(当前服务器能看到的所有服务器集合) 中 包含 接收到消息中的服务器id 和 n.leader
                     /*
                      * Only proceed if the vote comes from a replica in the
                      * voting view for a replica in the voting view.
                      */
-                    switch (n.state) {// 确定接收消息中的服务器状态
+                    switch (n.state) {// (给当前server发投票信息的server的状态)确定接收消息中的服务器状态
                     case LOOKING:
                         // If notification > current, replace and send messages out.若 通知周期 大于 当前的,则替换选票并发送消息
                         if (n.electionEpoch > logicalclock.get()) {// 1.如果选举周期大于逻辑时钟,说明这是新一轮的选举
@@ -890,14 +890,14 @@ public class FastLeaderElection implements Election {
 
                         if (termPredicate(recvset,
                                 new Vote(proposedLeader, proposedZxid,
-                                        logicalclock.get(), proposedEpoch))) {
+                                        logicalclock.get(), proposedEpoch))) {// 可以结束选举
 
                             // Verify if there is any change in the proposed leader.验证提议的leader是否有任何变化,默认等待20秒.若无变化则选举结束
                             while((n = recvqueue.poll(finalizeWait,
-                                    TimeUnit.MILLISECONDS)) != null){// 再等一会儿，看是否有新的投票
+                                    TimeUnit.MILLISECONDS)) != null){// (看看接收队列里还有没有新的选票)再等一会儿，看是否有新的投票
                                 if(totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
                                         proposedLeader, proposedZxid, proposedEpoch)){
-                                    recvqueue.put(n);
+                                    recvqueue.put(n);// 要是有新的较优的选票,则不能结束选举
                                     break;
                                 }
                             }
@@ -906,15 +906,15 @@ public class FastLeaderElection implements Election {
                              * This predicate is true once we don't read any new
                              * relevant message from the reception queue
                              */
-                            if (n == null) {
+                            if (n == null) {// 结束选举
                                 self.setPeerState((proposedLeader == self.getId()) ?
-                                        ServerState.LEADING: learningState());// 设置自身状态
+                                        ServerState.LEADING: learningState());// 设置自身状态 leader or follower or observer
 
                                 Vote endVote = new Vote(proposedLeader,
                                                         proposedZxid,
                                                         logicalclock.get(),
                                                         proposedEpoch);
-                                leaveInstance(endVote);
+                                leaveInstance(endVote);// 清空接收队列
                                 return endVote;
                             }
                         }
@@ -947,7 +947,7 @@ public class FastLeaderElection implements Election {
                             }
                         }
 
-                        /*
+                        /* 确认大多数都跟随同一个leader
                          * Before joining an established ensemble, verify
                          * a majority is following the same leader.
                          */

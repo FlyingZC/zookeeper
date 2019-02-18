@@ -78,7 +78,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
 
     Thread thread;
     @Override
-    public void configure(InetSocketAddress addr, int maxcc) throws IOException {
+    public void configure(InetSocketAddress addr, int maxcc) throws IOException {// 配置
         configureSaslLogin();
 
         thread = new ZooKeeperThread(this, "NIOServerCxn.Factory:" + addr);
@@ -101,7 +101,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
     public void setMaxClientCnxnsPerHost(int max) {
         maxClientCnxns = max;
     }
-
+    /**启动ServerCnxnFactory线程*/
     @Override
     public void start() {
         // ensure thread is started once and only once
@@ -115,8 +115,8 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
             InterruptedException {
         start();
         setZooKeeperServer(zks);
-        zks.startdata();
-        zks.startup();
+        zks.startdata();// loadData
+        zks.startup();// zookeeperServer.startup()
     }
 
     @Override
