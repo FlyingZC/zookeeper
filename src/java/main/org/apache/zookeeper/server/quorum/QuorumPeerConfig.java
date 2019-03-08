@@ -235,7 +235,7 @@ public class QuorumPeerConfig {
                     }
                 }
                 if (type == LearnerType.OBSERVER){
-                    observers.put(Long.valueOf(sid), new QuorumServer(sid, hostname, port, electionPort, type));
+                    observers.put(Long.valueOf(sid), new QuorumServer(sid, hostname, port, electionPort, type));// 根据配置创建 QuorumServer对象
                 } else {
                     servers.put(Long.valueOf(sid), new QuorumServer(sid, hostname, port, electionPort, type));
                 }

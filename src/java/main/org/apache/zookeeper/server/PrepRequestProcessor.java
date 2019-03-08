@@ -319,11 +319,11 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         throws KeeperException, IOException, RequestProcessorException
     {
         request.hdr = new TxnHeader(request.sessionId, request.cxid, zxid,
-                                    Time.currentWallTime(), type);
+                                    Time.currentWallTime(), type);// 创建请求事务头,后续的processors都是基于该请求头来识别当前请求是否是事务请求
 
         switch (type) {
             case OpCode.create:                
-                zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
+                zks.sessionTracker.checkSession(request.sessionId, request.getOwner());// session检查
                 CreateRequest createRequest = (CreateRequest)record;   
                 if(deserialize)
                     ByteBufferInputStream.byteBuffer2Record(request.request, createRequest);
@@ -345,9 +345,9 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                         request.authInfo);
                 int parentCVersion = parentRecord.stat.getCversion();
                 CreateMode createMode =
-                    CreateMode.fromFlag(createRequest.getFlags());
-                if (createMode.isSequential()) {
-                    path = path + String.format(Locale.ENGLISH, "%010d", parentCVersion);
+                    CreateMode.fromFlag(createRequest.getFlags());// 获取创建模式
+                if (createMode.isSequential()) {// 顺序模式
+                    path = path + String.format(Locale.ENGLISH, "%010d", parentCVersion);// 在路径后添加一串数字
                 }
                 validatePath(path, request.sessionId);
                 try {
@@ -357,21 +357,21 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 } catch (KeeperException.NoNodeException e) {
                     // ignore this one
                 }
-                boolean ephemeralParent = parentRecord.stat.getEphemeralOwner() != 0;
-                if (ephemeralParent) {
+                boolean ephemeralParent = parentRecord.stat.getEphemeralOwner() != 0;// 父节点是否为临时节点
+                if (ephemeralParent) {// 临时节点不允许拥有子节点
                     throw new KeeperException.NoChildrenForEphemeralsException(path);
                 }
-                int newCversion = parentRecord.stat.getCversion()+1;
+                int newCversion = parentRecord.stat.getCversion()+1;// 新的子节点版本号
                 request.txn = new CreateTxn(path, createRequest.getData(),
                         listACL,
-                        createMode.isEphemeral(), newCversion);
+                        createMode.isEphemeral(), newCversion);// 新事务
                 StatPersisted s = new StatPersisted();
                 if (createMode.isEphemeral()) {
-                    s.setEphemeralOwner(request.sessionId);
+                    s.setEphemeralOwner(request.sessionId);// 创建节点为临时节点
                 }
                 parentRecord = parentRecord.duplicate(request.hdr.getZxid());
-                parentRecord.childCount++;
-                parentRecord.stat.setCversion(newCversion);
+                parentRecord.childCount++;// 子节点数量加1
+                parentRecord.stat.setCversion(newCversion);// 设置新的子节点版本号
                 addChangeRecord(parentRecord);
                 addChangeRecord(new ChangeRecord(request.hdr.getZxid(), path, s,
                         0, listACL));
@@ -520,7 +520,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         }
     }
 
-    /**
+    /** 该方法在 ProcessRequestThread(它是单例的)中调用，因此这个方法仅有一个线程调用
      * This method will be called inside the ProcessRequestThread, which is a
      * singleton, so there will be a single thread calling this code.
      *
@@ -762,7 +762,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
 
     public void processRequest(Request request) {
         // request.addRQRec(">prep="+zks.outstandingChanges.size());
-        submittedRequests.add(request);
+        submittedRequests.add(request);// 将请求添加至 submittedRequests队列进行后续处理(run()方法中)
     }
 
     public void shutdown() {

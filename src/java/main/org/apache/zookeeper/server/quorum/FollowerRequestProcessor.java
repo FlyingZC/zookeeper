@@ -29,7 +29,7 @@ import org.apache.zookeeper.server.Request;
 import org.apache.zookeeper.server.ZooKeeperCriticalThread;
 import org.apache.zookeeper.server.ZooTrace;
 
-/**
+/** 此 RequestProcessor将 修改系统状态的所有请求(所有事务请求) 转发给Leader
  * This RequestProcessor forwards any requests that modify the state of the
  * system to the Leader.
  */

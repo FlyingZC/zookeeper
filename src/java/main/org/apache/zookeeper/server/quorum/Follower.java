@@ -114,7 +114,7 @@ public class Follower extends Learner{
             break;
         case Leader.PROPOSAL: // Leader将要执行的写事务命令,Follower只有在收到 COMMIT消息时才真正执行 PROPOSAL命令
             TxnHeader hdr = new TxnHeader();// 同一个写事务命令会在Leader和多个Follower上都执行一次，保证集群数据的一致性
-            Record txn = SerializeUtils.deserializeTxn(qp.getData(), hdr);
+            Record txn = SerializeUtils.deserializeTxn(qp.getData(), hdr);// 发序列化 请求数据
             if (hdr.getZxid() != lastQueued + 1) {
                 LOG.warn("Got zxid 0x"
                         + Long.toHexString(hdr.getZxid())

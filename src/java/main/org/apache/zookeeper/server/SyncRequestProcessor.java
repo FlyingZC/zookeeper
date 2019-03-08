@@ -27,7 +27,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 此 RequestProcessor将请求记录到磁盘。它批量处理有效执行io的请求。在将日志同步到磁盘之前，请求不会传递到下一个RequestProcessor
  * This RequestProcessor logs requests to disk. It batches the requests to do
  * the io efficiently. The request is not passed to the next RequestProcessor
  * until its log has been synced to disk.
@@ -48,13 +48,13 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
     private static final Logger LOG = LoggerFactory.getLogger(SyncRequestProcessor.class);
     private final ZooKeeperServer zks;
     private final LinkedBlockingQueue<Request> queuedRequests =
-        new LinkedBlockingQueue<Request>();
+        new LinkedBlockingQueue<Request>();// 请求队列
     private final RequestProcessor nextProcessor;
 
-    private Thread snapInProcess = null;
+    private Thread snapInProcess = null;// 快照处理线程
     volatile private boolean running;
 
-    /**
+    /** 等待被刷新到磁盘的请求队列
      * Transactions that have been written and are waiting to be flushed to
      * disk. Basically this is the list of SyncItems whose callbacks will be
      * invoked after flush returns successfully.
@@ -123,12 +123,12 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
             setRandRoll(r.nextInt(snapCount/2));
             while (true) {
                 Request si = null;
-                if (toFlush.isEmpty()) {
-                    si = queuedRequests.take();
-                } else {
-                    si = queuedRequests.poll();
-                    if (si == null) {
-                        flush(toFlush);
+                if (toFlush.isEmpty()) {// 没有需要刷新到磁盘的请求
+                    si = queuedRequests.take();// 从请求队列中取出一个请求，若队列为空会阻塞住
+                } else {// 有需要刷新到磁盘的请求
+                    si = queuedRequests.poll();// 从请求队列中取出一个请求，若队列为空，则返回空，不会阻塞
+                    if (si == null) {// 取出的请求为空
+                        flush(toFlush);// 刷新到磁盘
                         continue;
                     }
                 }
@@ -137,26 +137,26 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 }
                 if (si != null) {
                     // track the number of records written to the log
-                    if (zks.getZKDatabase().append(si)) {
+                    if (zks.getZKDatabase().append(si)) {// 将请求添加至日志文件，只有事务性请求才会返回true
                         logCount++;
                         if (logCount > (snapCount / 2 + randRoll)) {
                             setRandRoll(r.nextInt(snapCount/2));
                             // roll the log
                             zks.getZKDatabase().rollLog();
                             // take a snapshot
-                            if (snapInProcess != null && snapInProcess.isAlive()) {
+                            if (snapInProcess != null && snapInProcess.isAlive()) {// 正在进行快照
                                 LOG.warn("Too busy to snap, skipping");
-                            } else {
+                            } else {// 未启动快照处理线程
                                 snapInProcess = new ZooKeeperThread("Snapshot Thread") {
                                         public void run() {
                                             try {
-                                                zks.takeSnapshot();
+                                                zks.takeSnapshot();// 启动线程处理快照
                                             } catch(Exception e) {
                                                 LOG.warn("Unexpected exception", e);
                                             }
                                         }
                                     };
-                                snapInProcess.start();
+                                snapInProcess.start();// 启动线程
                             }
                             logCount = 0;
                         }
@@ -173,8 +173,8 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                         }
                         continue;
                     }
-                    toFlush.add(si);
-                    if (toFlush.size() > 1000) {
+                    toFlush.add(si);// 将请求添加至 toFlush队列
+                    if (toFlush.size() > 1000) {// 队列大小 大于1000，直接刷新到磁盘
                         flush(toFlush);
                     }
                 }
@@ -185,16 +185,16 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         }
         LOG.info("SyncRequestProcessor exited!");
     }
-
+    // 刷盘
     private void flush(LinkedList<Request> toFlush)
         throws IOException, RequestProcessorException
     {
         if (toFlush.isEmpty())
             return;
 
-        zks.getZKDatabase().commit();
+        zks.getZKDatabase().commit();// 刷盘
         while (!toFlush.isEmpty()) {
-            Request i = toFlush.remove();
+            Request i = toFlush.remove();// 取出请求,调用nextProcessor
             if (nextProcessor != null) {
                 nextProcessor.processRequest(i);
             }

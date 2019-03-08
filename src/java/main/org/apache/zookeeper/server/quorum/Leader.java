@@ -306,7 +306,7 @@ public class Leader {
      * This message type informs observers of a committed proposal.
      */
     final static int INFORM = 8;
-
+    // zxid 和 proposal的映射
     ConcurrentMap<Long, Proposal> outstandingProposals = new ConcurrentHashMap<Long, Proposal>();
 
     ConcurrentLinkedQueue<Proposal> toBeApplied = new ConcurrentLinkedQueue<Proposal>();
@@ -596,14 +596,14 @@ public class Leader {
             // The proposal has already been committed
             return;
         }
-        Proposal p = outstandingProposals.get(zxid);
+        Proposal p = outstandingProposals.get(zxid);// 根据zxid取出proposal
         if (p == null) {
             LOG.warn("Trying to commit future proposal: zxid 0x{} from {}",
                     Long.toHexString(zxid), followerAddr);
             return;
         }
         
-        p.ackSet.add(sid);
+        p.ackSet.add(sid);// 保存follower发来的ack的sid
         if (LOG.isDebugEnabled()) {
             LOG.debug("Count for zxid: 0x{} is {}",
                     Long.toHexString(zxid), p.ackSet.size());
@@ -614,17 +614,17 @@ public class Leader {
                         Long.toHexString(zxid), followerAddr);
                 LOG.warn("First is 0x{}", Long.toHexString(lastCommitted + 1));
             }
-            outstandingProposals.remove(zxid);
+            outstandingProposals.remove(zxid);// 移除proposal
             if (p.request != null) {
-                toBeApplied.add(p);
+                toBeApplied.add(p);// 将proposal添加到toBeApplied
             }
 
             if (p.request == null) {
                 LOG.warn("Going to commmit null request for proposal: {}", p);
             }
-            commit(zxid);
-            inform(p);
-            zk.commitProcessor.commit(p.request);
+            commit(zxid);// 创建Leader.COMMIT包并发给所有quorum
+            inform(p);// 创建Leader.INFORM包,发送给所有observers
+            zk.commitProcessor.commit(p.request);// commit
             if(pendingSyncs.containsKey(zxid)){
                 for(LearnerSyncRequest r: pendingSyncs.remove(zxid)) {
                     sendSync(r);
@@ -712,7 +712,7 @@ public class Leader {
 
     long lastCommitted = -1;
 
-    /**
+    /** 创建Leader.COMMIT包并发给所有quorum
      * Create a commit packet and send it to all the members of the quorum
      * 
      * @param zxid
@@ -725,7 +725,7 @@ public class Leader {
         sendPacket(qp);
     }
     
-    /**
+    /** 创建Leader.INFORM包,发送给所有observers
      * Create an inform packet and send it to all observers.
      * @param zxid
      * @param proposal
@@ -755,7 +755,7 @@ public class Leader {
         }
     }
 
-    /**
+    /** 创建Proposal并发送给所有成员
      * create a proposal and send it out to all the members
      * 
      * @param request
@@ -772,7 +772,7 @@ public class Leader {
             shutdown(msg);
             throw new XidRolloverException(msg);
         }
-        byte[] data = SerializeUtils.serializeRequest(request);
+        byte[] data = SerializeUtils.serializeRequest(request);// 序列化请求
         proposalStats.setLastProposalSize(data.length);
         QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid, data, null);
         

@@ -413,7 +413,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             createSessionTracker();
         }
         startSessionTracker();// 会话追踪器
-        setupRequestProcessors();
+        setupRequestProcessors();// 设置processors链
 
         registerJMX();
 
@@ -724,7 +724,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         Request si = new Request(cnxn, sessionId, xid, type, bb, authInfo);
         submitRequest(si);
     }
-    
+    /**将请求交由 processor链处理*/
     public void submitRequest(Request si) {
         if (firstProcessor == null) {// 第一个处理器为空
             synchronized (this) {

@@ -88,7 +88,7 @@ public class LearnerHandler extends ZooKeeperThread {
     	return version;
     }
     
-    /**
+    /** 保存用于发送给learner的packets
      * The packets to be sent to the learner
      */
     final LinkedBlockingQueue<QuorumPacket> queuedPackets =

@@ -152,7 +152,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 	    this.recreateSocketAddresses();
 	}
 
-        /**
+        /** hostname DNS查找,创建 this.addr 和 this.electionAddr
          * Performs a DNS lookup of hostname and (re)creates the this.addr and
          * this.electionAddr InetSocketAddress objects as appropriate
          *
@@ -202,7 +202,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             }
         }
 
-        /**
+        /** 将hostname解析为IP地址，并找到一个可访问的地址
          * Resolve the hostname to IP addresses, and find one reachable address.
          *
          * @param hostname the name of the host

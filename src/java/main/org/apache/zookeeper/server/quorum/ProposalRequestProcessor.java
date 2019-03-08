@@ -25,7 +25,7 @@ import org.apache.zookeeper.server.quorum.Leader.XidRolloverException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 将请求转发给AckRequestProcessor和SyncRequestProcessor
  * This RequestProcessor simply forwards requests to an AckRequestProcessor and
  * SyncRequestProcessor.
  */
@@ -72,10 +72,10 @@ public class ProposalRequestProcessor implements RequestProcessor {
             zks.getLeader().processSync((LearnerSyncRequest)request);
         } else {
                 nextProcessor.processRequest(request);
-            if (request.hdr != null) {
+            if (request.hdr != null) {// 事务请求
                 // We need to sync and get consensus on any transactions
                 try {
-                    zks.getLeader().propose(request);
+                    zks.getLeader().propose(request);// 发proposal包
                 } catch (XidRolloverException e) {
                     throw new RequestProcessorException(e.getMessage(), e);
                 }

@@ -33,7 +33,7 @@ import org.apache.zookeeper.server.quorum.Leader.XidRolloverException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 是ReadOnlyZooKeeperServer请求处理链的第一个处理器，将只读请求传递给下个处理器，抛弃改变状态的请求(事务请求)。
  * This processor is at the beginning of the ReadOnlyZooKeeperServer's
  * processors chain. All it does is, it passes read-only operations (e.g.
  * OpCode.getData, OpCode.exists) through to the next processor, but drops

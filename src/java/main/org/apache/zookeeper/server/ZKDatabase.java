@@ -464,7 +464,7 @@ public class ZKDatabase {
         SerializeUtils.serializeSnapshot(getDataTree(), oa, getSessionWithTimeOuts());
     }
 
-    /**
+    /** 追加到事务日志
      * append to the underlying transaction log 
      * @param si the request to append
      * @return true if the append was succesfull and false if not

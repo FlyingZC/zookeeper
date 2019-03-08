@@ -99,30 +99,30 @@ public class FinalRequestProcessor implements RequestProcessor {
         ProcessTxnResult rc = null;
         synchronized (zks.outstandingChanges) {
             while (!zks.outstandingChanges.isEmpty()
-                    && zks.outstandingChanges.get(0).zxid <= request.zxid) {
-                ChangeRecord cr = zks.outstandingChanges.remove(0);
-                if (cr.zxid < request.zxid) {
+                    && zks.outstandingChanges.get(0).zxid <= request.zxid) {// outstandingChanges不为空 且 首个元素的zxid小于请求的zxid(移除掉)
+                ChangeRecord cr = zks.outstandingChanges.remove(0);// 移除首个元素
+                if (cr.zxid < request.zxid) {// 若Record的zxid小于请求的zxid
                     LOG.warn("Zxid outstanding "
                             + cr.zxid
                             + " is less than current " + request.zxid);
                 }
                 if (zks.outstandingChangesForPath.get(cr.path) == cr) {
-                    zks.outstandingChangesForPath.remove(cr.path);
+                    zks.outstandingChangesForPath.remove(cr.path);// 移除cr的路径对应的记录
                 }
             }
-            if (request.hdr != null) {
+            if (request.hdr != null) {// 请求头不为空,则为事务请求
                TxnHeader hdr = request.hdr;
-               Record txn = request.txn;
+               Record txn = request.txn;// 获取请求事务
 
-               rc = zks.processTxn(hdr, txn);
+               rc = zks.processTxn(hdr, txn);// 处理事务
             }
             // do not add non quorum packets to the queue.
-            if (Request.isQuorum(request.type)) {
+            if (Request.isQuorum(request.type)) {// 只将quorum包（事务性请求）添加进队列
                 zks.getZKDatabase().addCommittedProposal(request);
             }
         }
 
-        if (request.hdr != null && request.hdr.getType() == OpCode.closeSession) {
+        if (request.hdr != null && request.hdr.getType() == OpCode.closeSession) { // 请求头不为空并且请求类型为关闭会话
             ServerCnxnFactory scxn = zks.getServerCnxnFactory();
             // this might be possible since
             // we might just be playing diffs from the leader
@@ -131,7 +131,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 // close session response being lost - we've already closed
                 // the session/socket here before we can send the closeSession
                 // in the switch block below
-                scxn.closeSession(request.sessionId);
+                scxn.closeSession(request.sessionId);// 关闭会话
                 return;
             }
         }
@@ -166,7 +166,7 @@ public class FinalRequestProcessor implements RequestProcessor {
 
                 lastOp = "PING";
                 cnxn.updateStatsForResponse(request.cxid, request.zxid, lastOp,
-                        request.createTime, Time.currentElapsedTime());
+                        request.createTime, Time.currentElapsedTime());// 更新响应的状态
 
                 cnxn.sendResponse(new ReplyHeader(-2,
                         zks.getZKDatabase().getDataTreeLastProcessedZxid(), 0), null, "response");
