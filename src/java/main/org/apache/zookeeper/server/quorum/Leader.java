@@ -412,7 +412,7 @@ public class Leader {
                         + Long.toHexString(newLeaderProposal.packet.getZxid()));
             }
             
-            waitForEpochAck(self.getId(), leaderStateSummary);
+            waitForEpochAck(self.getId(), leaderStateSummary);// 所有LearnerHandler线程和Leader主线程都会阻塞在该方法上,接收follower响应的ACKEPOCH包
             self.setCurrentEpoch(epoch);
 
             // We have to get at least a majority of servers in sync with
@@ -608,7 +608,7 @@ public class Leader {
             LOG.debug("Count for zxid: 0x{} is {}",
                     Long.toHexString(zxid), p.ackSet.size());
         }
-        if (self.getQuorumVerifier().containsQuorum(p.ackSet)){             
+        if (self.getQuorumVerifier().containsQuorum(p.ackSet)){// 当接收到的对于 proposal包的ack超过一半
             if (zxid != lastCommitted+1) {
                 LOG.warn("Commiting zxid 0x{} from {} not first!",
                         Long.toHexString(zxid), followerAddr);

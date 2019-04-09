@@ -82,7 +82,7 @@ public class FollowerZooKeeperServer extends LearnerZooKeeperServer {
                 new SendAckRequestProcessor((Learner)getFollower()));
         syncProcessor.start();// SyncRequestProcessor（线程）=> SendAckRequestProcessor
     }
-
+    // 待处理的事务队列
     LinkedBlockingQueue<Request> pendingTxns = new LinkedBlockingQueue<Request>();
 
     public void logRequest(TxnHeader hdr, Record txn) {

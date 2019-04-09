@@ -216,7 +216,7 @@ public class FastLeaderElection implements Election {
     LinkedBlockingQueue<ToSend> sendqueue;
     LinkedBlockingQueue<Notification> recvqueue;// 选票接收队列，用于保存接收到的外部投票
 
-    /**
+    /** 信使. 消息处理程序的多线程实现。 Messenger实现了两个ZooKeeperThread的子类：WorkReceiver线程和 WorkSender线程
      * Multi-threaded implementation of message handler. Messenger
      * implements two sub-classes: WorkReceiver and  WorkSender. The
      * functionality of each is obvious from the name. Each of these
@@ -632,8 +632,8 @@ public class FastLeaderElection implements Election {
      *  @param zxid     zxid of the the vote received last
      */
     protected boolean termPredicate(
-            HashMap<Long, Vote> votes,
-            Vote vote) {
+            HashMap<Long, Vote> votes,// 本轮选举中收到的所有选票
+            Vote vote) {// 选出来的投票
 
         HashSet<Long> set = new HashSet<Long>();
 

@@ -120,7 +120,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
 
             // we do this in an attempt to ensure that not all of the servers
             // in the ensemble take a snapshot at the same time
-            setRandRoll(r.nextInt(snapCount/2));
+            setRandRoll(r.nextInt(snapCount/2));// 随机数用于防止所有servers在同一时刻进行snapshot操作
             while (true) {
                 Request si = null;
                 if (toFlush.isEmpty()) {// 没有需要刷新到磁盘的请求
@@ -192,7 +192,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
         if (toFlush.isEmpty())
             return;
 
-        zks.getZKDatabase().commit();// 刷盘
+        zks.getZKDatabase().commit();// 事务日志刷盘
         while (!toFlush.isEmpty()) {
             Request i = toFlush.remove();// 取出请求,调用nextProcessor
             if (nextProcessor != null) {

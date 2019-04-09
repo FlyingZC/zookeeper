@@ -199,7 +199,7 @@ public class LearnerHandler extends ZooKeeperThread {
         return learnerType;
     }
 
-    /**
+    /** 此方法将 使用该线程 发送 添加到queuedPackets列表中的数据包
      * This method will use the thread to send packets added to the
      * queuedPackets list
      *
@@ -350,12 +350,12 @@ public class LearnerHandler extends ZooKeeperThread {
                   learnerType = LearnerType.OBSERVER;
             }            
             // follower的选举周期
-            long lastAcceptedEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
+            long lastAcceptedEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());// 根据 follower的zxid得到 follower的 epoch
             
             long peerLastZxid;
             StateSummary ss = null;
             long zxid = qp.getZxid();
-            long newEpoch = leader.getEpochToPropose(this.getSid(), lastAcceptedEpoch);// 2.该线程和leader.lead()线程都可能阻塞在此处直到超过半数的server接受了newEpoch
+            long newEpoch = leader.getEpochToPropose(this.getSid(), lastAcceptedEpoch);// 2.该线程和leader.lead()线程都可能阻塞在此处直到超过半数的server接受了newEpoch [在learnerHandler接收到follower的 FOLLOWERINFO包后阻塞]
             
             if (this.getVersion() < 0x10000) {
                 // we are going to have to extrapolate the epoch information
@@ -403,15 +403,15 @@ public class LearnerHandler extends ZooKeeperThread {
                         +" minCommittedLog=0x"+Long.toHexString(minCommittedLog)
                         +" peerLastZxid=0x"+Long.toHexString(peerLastZxid));
 
-                LinkedList<Proposal> proposals = leader.zk.getZKDatabase().getCommittedLog();
+                LinkedList<Proposal> proposals = leader.zk.getZKDatabase().getCommittedLog();// 提交的事务日志
 
-                if (peerLastZxid == leader.zk.getZKDatabase().getDataTreeLastProcessedZxid()) {
-                    // Follower is already sync with us, send empty diff
+                if (peerLastZxid == leader.zk.getZKDatabase().getDataTreeLastProcessedZxid()) { // 最大的zxid相同
+                    // Follower is already sync with us, send empty diff. follower已经和leader同步了,发送空的 DIFF包
                     LOG.info("leader and follower are in sync, zxid=0x{}",
                             Long.toHexString(peerLastZxid));
                     packetToSend = Leader.DIFF;
                     zxidToSend = peerLastZxid;
-                } else if (proposals.size() != 0) {
+                } else if (proposals.size() != 0) {// 有事务日志
                     LOG.debug("proposal size is {}", proposals.size());
                     if ((maxCommittedLog >= peerLastZxid)
                             && (minCommittedLog <= peerLastZxid)) {// 发DIFF包.若follower还没处理这个分布式事务,有可能down掉了又恢复,则继续处理这个事务
@@ -432,8 +432,8 @@ public class LearnerHandler extends ZooKeeperThread {
                         packetToSend = Leader.DIFF;
                         zxidToSend = maxCommittedLog;
 
-                        for (Proposal propose: proposals) {
-                            // skip the proposals the peer already has.已经被处理过了则无视
+                        for (Proposal propose: proposals) {// 遍历 leader的事务日志
+                            // skip the proposals the peer already has.已经被follower处理过了则无视
                             if (propose.packet.getZxid() <= peerLastZxid) {
                                 prevProposalZxid = propose.packet.getZxid();
                                 continue;

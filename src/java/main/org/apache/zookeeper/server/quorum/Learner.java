@@ -326,7 +326,7 @@ public class Learner {
         boolean snapshotNeeded = true;
         readPacket(qp);// 1.读取同步数据包
         LinkedList<Long> packetsCommitted = new LinkedList<Long>();
-        LinkedList<PacketInFlight> packetsNotCommitted = new LinkedList<PacketInFlight>();
+        LinkedList<PacketInFlight> packetsNotCommitted = new LinkedList<PacketInFlight>();// 记录 DIFF模式下(Follower比Leader的事务少),leader给Follower补足的事务.Leader会将需要补充的事务生成PROPOSAL包和COMMIT包发给Follower执行
         synchronized (zk) {
             if (qp.getType() == Leader.DIFF) {// 差异模式，说明Follower比Leader的事务少，需要给Follower补足，这时候Leader会将需要补充的事务生成 PROPOSAL包和 COMMIT包发给Follower执行。
                 LOG.info("Getting a diff from the leader 0x{}", Long.toHexString(qp.getZxid()));
@@ -390,11 +390,11 @@ public class Learner {
                             + Long.toHexString(lastQueued + 1));
                     }
                     lastQueued = pif.hdr.getZxid();
-                    packetsNotCommitted.add(pif);
+                    packetsNotCommitted.add(pif);// follower待执行的事务
                     break;
                 case Leader.COMMIT:
                     if (!writeToTxnLog) {
-                        pif = packetsNotCommitted.peekFirst();
+                        pif = packetsNotCommitted.peekFirst();// 执行 follower待执行的事务
                         if (pif.hdr.getZxid() != qp.getZxid()) {
                             LOG.warn("Committing " + qp.getZxid() + ", but next proposal is " + pif.hdr.getZxid());
                         } else {
@@ -406,7 +406,7 @@ public class Learner {
                     }
                     break;
                 case Leader.INFORM:
-                    /*
+                    /* 只有观察者才能得到这种类型的数据包。我们将此视为接收PROPOSAL和COMMMIT
                      * Only observer get this type of packet. We treat this
                      * as receiving PROPOSAL and COMMMIT.
                      */
@@ -435,7 +435,7 @@ public class Learner {
                         self.setCurrentEpoch(newEpoch);
                     }
                     self.cnxnFactory.setZooKeeperServer(zk);                
-                    break outerLoop;
+                    break outerLoop;// 跳出外层循环
                 case Leader.NEWLEADER: // Getting NEWLEADER here instead of in discovery Leader会发送 NEWLEADER包，Follower收到 NEWLEADER包后回复ACK给 Leader
                     // means this is Zab 1.0
                     // Create updatingEpoch file and remove it after current
@@ -458,15 +458,15 @@ public class Learner {
                     }
                     writeToTxnLog = true; //Anything after this needs to go to the transaction log, not applied directly in memory
                     isPreZAB1_0 = false;
-                    writePacket(new QuorumPacket(Leader.ACK, newLeaderZxid, null, null), true);
+                    writePacket(new QuorumPacket(Leader.ACK, newLeaderZxid, null, null), true);// 发送ACK 作为对 NEWLEADER包 的回复
                     break;
                 }
             }
         }
         ack.setZxid(ZxidUtils.makeZxid(newEpoch, 0));
-        writePacket(ack, true);
+        writePacket(ack, true);// 回复 ACK包 给leader
         sock.setSoTimeout(self.tickTime * self.syncLimit);
-        zk.startup();
+        zk.startup();// 启动follower zk
         /*
          * Update the election vote here to ensure that all members of the
          * ensemble report the same vote to new servers that start up and
