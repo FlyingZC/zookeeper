@@ -34,7 +34,7 @@ import org.apache.zookeeper.server.persistence.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 清理快照 和 事务日志
  * this class is used to clean up the 
  * snapshot and data log dir's. This is usually
  * run as a cronjob on the zookeeper server machine.
@@ -72,23 +72,23 @@ public class PurgeTxnLog {
      * @throws IOException
      */
     public static void purge(File dataDir, File snapDir, int num) throws IOException {
-        if (num < 3) {
+        if (num < 3) {// 清理后保留的快照数量 必须 大于等于3
             throw new IllegalArgumentException(COUNT_ERR_MSG);
         }
 
         FileTxnSnapLog txnLog = new FileTxnSnapLog(dataDir, snapDir);
 
-        List<File> snaps = txnLog.findNRecentSnapshots(num);
+        List<File> snaps = txnLog.findNRecentSnapshots(num);// 找到最新的 n个快照
         int numSnaps = snaps.size();
         if (numSnaps > 0) {
-            purgeOlderSnapshots(txnLog, snaps.get(numSnaps - 1));
+            purgeOlderSnapshots(txnLog, snaps.get(numSnaps - 1));// 清理除了要保留的 n个快照外的 其他旧快照
         }
     }
 
     // VisibleForTesting
     static void purgeOlderSnapshots(FileTxnSnapLog txnLog, File snapShot) {
         final long leastZxidToBeRetain = Util.getZxidFromName(
-                snapShot.getName(), PREFIX_SNAPSHOT);
+                snapShot.getName(), PREFIX_SNAPSHOT);// 需要保留的最小的快照(或事务日志)的zxid(即zxid>=leastZxidToBeRetain的快照文件都会保留)
 
         /**
          * We delete all files with a zxid in their name that is less than leastZxidToBeRetain.
@@ -110,9 +110,9 @@ public class PurgeTxnLog {
          * calling txnLog.getSnapshotLogs().
          */
         final Set<File> retainedTxnLogs = new HashSet<File>();
-        retainedTxnLogs.addAll(Arrays.asList(txnLog.getSnapshotLogs(leastZxidToBeRetain)));
+        retainedTxnLogs.addAll(Arrays.asList(txnLog.getSnapshotLogs(leastZxidToBeRetain)));// 需要保留的事务日志
 
-        /**
+        /** 查找所有要删除的事务日志 和 快照文件
          * Finds all candidates for deletion, which are files with a zxid in their name that is less
          * than leastZxidToBeRetain.  There's an exception to this rule, as noted above.
          */
@@ -122,32 +122,32 @@ public class PurgeTxnLog {
                 this.prefix=prefix;
             }
             public boolean accept(File f){
-                if(!f.getName().startsWith(prefix + "."))
+                if(!f.getName().startsWith(prefix + "."))// 不是快照或事务日志 不删
                     return false;
-                if (retainedTxnLogs.contains(f)) {
+                if (retainedTxnLogs.contains(f)) {// 要保留的事务日志不删
                     return false;
                 }
                 long fZxid = Util.getZxidFromName(f.getName(), prefix);
-                if (fZxid >= leastZxidToBeRetain) {
+                if (fZxid >= leastZxidToBeRetain) {// 文件的zxid大于等于给定的 不删
                     return false;
                 }
                 return true;
             }
         }
-        // add all non-excluded log files
+        // add all non-excluded log files 1.添加所有要删除的事务日志
         List<File> files = new ArrayList<File>();
         File[] fileArray = txnLog.getDataDir().listFiles(new MyFileFilter(PREFIX_LOG));
         if (fileArray != null) {
             files.addAll(Arrays.asList(fileArray));
         }
 
-        // add all non-excluded snapshot files to the deletion list
+        // add all non-excluded snapshot files to the deletion list 2.添加所有要删除的快照文件
         fileArray = txnLog.getSnapDir().listFiles(new MyFileFilter(PREFIX_SNAPSHOT));
         if (fileArray != null) {
             files.addAll(Arrays.asList(fileArray));
         }
 
-        // remove the old files
+        // remove the old files 3.移除所有过期文件
         for(File f: files)
         {
             final String msg = "Removing file: "+

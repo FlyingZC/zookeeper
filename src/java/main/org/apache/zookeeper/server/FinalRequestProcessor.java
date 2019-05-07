@@ -114,11 +114,11 @@ public class FinalRequestProcessor implements RequestProcessor {
                TxnHeader hdr = request.hdr;
                Record txn = request.txn;// 获取请求事务
 
-               rc = zks.processTxn(hdr, txn);// 处理事务
+               rc = zks.processTxn(hdr, txn);// 处理事务,应用到 dataTree上
             }
             // do not add non quorum packets to the queue.
             if (Request.isQuorum(request.type)) {// 只将quorum包（事务性请求）添加进队列
-                zks.getZKDatabase().addCommittedProposal(request);
+                zks.getZKDatabase().addCommittedProposal(request);// 事务请求保存到 committedLog TODO 什么时候使用
             }
         }
 

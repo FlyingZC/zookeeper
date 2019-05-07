@@ -66,7 +66,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
      */
     private static int snapCount = ZooKeeperServer.getSnapCount();
     
-    /**
+    /** 滚动日志之前 的 日志条数，随机数
      * The number of log entries before rolling the log, number
      * is chosen randomly
      */
@@ -116,7 +116,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
     @Override
     public void run() {
         try {
-            int logCount = 0;
+            int logCount = 0;// 事务日志记录计数,用于判断记录 n次事务日志后 是否需要进行 snapshot
 
             // we do this in an attempt to ensure that not all of the servers
             // in the ensemble take a snapshot at the same time
@@ -127,7 +127,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                     si = queuedRequests.take();// 从请求队列中取出一个请求，若队列为空会阻塞住
                 } else {// 有需要刷新到磁盘的请求
                     si = queuedRequests.poll();// 从请求队列中取出一个请求，若队列为空，则返回空，不会阻塞
-                    if (si == null) {// 取出的请求为空
+                    if (si == null) {// 取出的请求为空(说明队列取完了 要刷盘?)
                         flush(toFlush);// 刷新到磁盘
                         continue;
                     }
@@ -139,14 +139,14 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                     // track the number of records written to the log
                     if (zks.getZKDatabase().append(si)) {// 将请求添加至日志文件，只有事务性请求才会返回true
                         logCount++;
-                        if (logCount > (snapCount / 2 + randRoll)) {
-                            setRandRoll(r.nextInt(snapCount/2));
-                            // roll the log
+                        if (logCount > (snapCount / 2 + randRoll)) {// 事务日志记录到一定次数后,进行 滚动日志 和 snapshot
+                            setRandRoll(r.nextInt(snapCount/2));// 重置 滚动日志 随机数
+                            // roll the log 滚动日志,创建新的日志文件
                             zks.getZKDatabase().rollLog();
                             // take a snapshot
                             if (snapInProcess != null && snapInProcess.isAlive()) {// 正在进行快照
                                 LOG.warn("Too busy to snap, skipping");
-                            } else {// 未启动快照处理线程
+                            } else {// 未启动快照处理线程(每次都新起一个线程进行 snapshot吗 ?)
                                 snapInProcess = new ZooKeeperThread("Snapshot Thread") {
                                         public void run() {
                                             try {
@@ -158,7 +158,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                                     };
                                 snapInProcess.start();// 启动线程
                             }
-                            logCount = 0;
+                            logCount = 0;// 重置计数
                         }
                     } else if (toFlush.isEmpty()) {
                         // optimization for read heavy workloads

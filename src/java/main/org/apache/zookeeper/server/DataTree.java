@@ -107,7 +107,7 @@ public class DataTree {
      */
     private final PathTrie pTrie = new PathTrie();
 
-    /**
+    /** 保存 session -> 临时节点set
      * This hashtable lists the paths of the ephemeral nodes of a session.
      */
     private final Map<Long, HashSet<String>> ephemerals =
@@ -1088,7 +1088,7 @@ public class DataTree {
                     throw new IOException("Invalid Datatree, unable to find " +
                             "parent " + parentPath + " of path " + path);
                 }
-                node.parent.addChild(path.substring(lastSlash + 1));
+                node.parent.addChild(path.substring(lastSlash + 1));// 挂到父节点下
                 long eowner = node.stat.getEphemeralOwner();
                 if (eowner != 0) {
                     HashSet<String> list = ephemerals.get(eowner);

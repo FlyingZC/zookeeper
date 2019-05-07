@@ -360,13 +360,13 @@ public class FastLeaderElection implements Election {
                                             v.getPeerEpoch());
                                     sendqueue.offer(notmsg);// 投票信息入队,等待发送
                                 }
-                            } else {// 推选服务器状态不为LOOKING
+                            } else {// (推选服务器状态不为LOOKING) 或 (推选服务器状态是LOOKING且推选者的选举周期大于等于当前server的逻辑时钟)
                                 /*
                                  * If this server is not looking, but the one that sent the ack
                                  * is looking, then send back what it believes to be the leader.
                                  */
                                 Vote current = self.getCurrentVote();// 获取当前投票
-                                if(ackstate == QuorumPeer.ServerState.LOOKING){// 为LOOKING状态
+                                if(ackstate == QuorumPeer.ServerState.LOOKING){// 推举者为LOOKING状态
                                     if(LOG.isDebugEnabled()){
                                         LOG.debug("Sending new notification. My id =  " +
                                                 self.getId() + " recipient=" +
@@ -894,7 +894,7 @@ public class FastLeaderElection implements Election {
 
                             // Verify if there is any change in the proposed leader.验证提议的leader是否有任何变化,默认等待20秒.若无变化则选举结束
                             while((n = recvqueue.poll(finalizeWait,
-                                    TimeUnit.MILLISECONDS)) != null){// (看看接收队列里还有没有新的选票)再等一会儿，看是否有新的投票
+                                    TimeUnit.MILLISECONDS)) != null){// (看看接收队列里还有没有新的选票)再等一会儿，看是否有新的投票. 默认等待20毫秒
                                 if(totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
                                         proposedLeader, proposedZxid, proposedEpoch)){
                                     recvqueue.put(n);// 要是有新的较优的选票,则不能结束选举
@@ -919,7 +919,7 @@ public class FastLeaderElection implements Election {
                             }
                         }
                         break;
-                    case OBSERVING:
+                    case OBSERVING: // 推举者的 server状态是 observer对选举不做处理,不参与
                         LOG.debug("Notification from observer: " + n.sid);
                         break;
                     case FOLLOWING: // following和下面的leading共用相同逻辑
@@ -928,7 +928,7 @@ public class FastLeaderElection implements Election {
                          * Consider all notifications from the same epoch
                          * together.
                          */
-                        if(n.electionEpoch == logicalclock.get()){// 与逻辑时钟相等
+                        if(n.electionEpoch == logicalclock.get()){// 接收到的投票的选举周期 与 当前server的逻辑时钟相等
                             recvset.put(n.sid, new Vote(n.leader,
                                                           n.zxid,
                                                           n.electionEpoch,

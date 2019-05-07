@@ -162,7 +162,7 @@ public class FileTxnLog implements TxnLog {
         return new Adler32();
     }
 
-    /**
+    /** 将当前日志文件 滚动为新文件.其实就是将 logStream置为null,那么要写入日志时(append操作)就会新创建一个日志文件用于写入
      * rollover the current log file to a new one.
      * @throws IOException
      */
@@ -208,21 +208,21 @@ public class FileTxnLog implements TxnLog {
             lastZxidSeen = hdr.getZxid();
         }
 
-        if (logStream==null) {// 日志流为空
+        if (logStream==null) {// 日志流为空,代表要新创建一个事务日志文件
            if(LOG.isInfoEnabled()){
                 LOG.info("Creating new log file: " + Util.makeLogName(hdr.getZxid()));
            }
-
+           // 根据事务头里的 zxid创建事务文件名
            logFileWrite = new File(logDir, Util.makeLogName(hdr.getZxid()));
            fos = new FileOutputStream(logFileWrite);
            logStream=new BufferedOutputStream(fos);
            oa = BinaryOutputArchive.getArchive(logStream);
-           FileHeader fhdr = new FileHeader(TXNLOG_MAGIC,VERSION, dbId);
+           FileHeader fhdr = new FileHeader(TXNLOG_MAGIC,VERSION, dbId);// 事务日志文件头信息(魔数,版本,dbId)
            fhdr.serialize(oa, "fileheader"); // 序列化fileheader
            // Make sure that the magic number is written before padding.
            logStream.flush(); // 刷新到磁盘
            filePadding.setCurrentSize(fos.getChannel().position());// 当前通道的大小
-           streamsToFlush.add(fos);// 添加fos
+           streamsToFlush.add(fos);// 添加 fos到 streamsToFlush
         }
         filePadding.padFile(fos.getChannel()); // 填充文件
         byte[] buf = Util.marshallTxnEntry(hdr, txn);// 将 事务头 和 事务数据 序列化成 Byte Buffer
@@ -247,13 +247,13 @@ public class FileTxnLog implements TxnLog {
      * @return
      */
     public static File[] getLogFiles(File[] logDirList,long snapshotZxid) {
-        List<File> files = Util.sortDataDir(logDirList, LOG_FILE_PREFIX, true);
-        long logZxid = 0;
+        List<File> files = Util.sortDataDir(logDirList, LOG_FILE_PREFIX, true);// 升序排
+        long logZxid = 0;// 记录 小于等于 snapshotZxid 的 所有 事务日志中 最大的那个 事务日志的 zxid
         // Find the log file that starts before or at the same time as the
         // zxid of the snapshot
         for (File f : files) {
-            long fzxid = Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX);
-            if (fzxid > snapshotZxid) {
+            long fzxid = Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX);// 当前事务日志的最小 zxid
+            if (fzxid > snapshotZxid) {// 比需要的zxid大,不管
                 continue;
             }
             // the files
@@ -268,7 +268,7 @@ public class FileTxnLog implements TxnLog {
             if (fzxid < logZxid) {
                 continue;
             }
-            v.add(f);
+            v.add(f);// 所有大于等于logZxid的日志文件都会被返回
         }
         return v.toArray(new File[0]);
 
@@ -330,7 +330,7 @@ public class FileTxnLog implements TxnLog {
                 log.getChannel().force(false);
 
                 long syncElapsedMS =
-                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startSyncNS);
+                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startSyncNS);// 记录刷盘耗费时间
                 if (syncElapsedMS > fsyncWarningThresholdMS) {
                     if(serverStats != null) {
                         serverStats.incrementFsyncThresholdExceedCount();
@@ -516,7 +516,7 @@ public class FileTxnLog implements TxnLog {
        
         PositionInputStream inputStream=null;
         //stored files is the list of files greater than
-        //the zxid we are looking for.
+        //the zxid we are looking for. 需要反序列化到内存中的事务文件列表
         private ArrayList<File> storedFiles;
 
         /**
@@ -537,7 +537,7 @@ public class FileTxnLog implements TxnLog {
          * @throws IOException
          */
         void init() throws IOException {
-            storedFiles = new ArrayList<File>();
+            storedFiles = new ArrayList<File>();// 保存 需要反序列化到内存中的事务文件列表
             List<File> files = Util.sortDataDir(FileTxnLog.getLogFiles(logDir.listFiles(), 0), LOG_FILE_PREFIX, false);
             for (File f: files) {
                 if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) >= zxid) {// 添加大于于zxid的所有日志文件
@@ -549,7 +549,7 @@ public class FileTxnLog implements TxnLog {
                     break;
                 }
             }
-            goToNextLog();
+            goToNextLog();// 迭代storedFiles中存储的下一个事务日志
             if (!next())
                 return;
             while (hdr.getZxid() < zxid) {

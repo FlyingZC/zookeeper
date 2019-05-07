@@ -377,10 +377,10 @@ public class LearnerHandler extends ZooKeeperThread {
                     return;
 				}
                 ByteBuffer bbepoch = ByteBuffer.wrap(ackEpochPacket.getData());
-                ss = new StateSummary(bbepoch.getInt(), ackEpochPacket.getZxid());
+                ss = new StateSummary(bbepoch.getInt(), ackEpochPacket.getZxid());// ackEpochPacket.getZxid() 为
                 leader.waitForEpochAck(this.getSid(), ss);// 5.所有LearnerHandler线程和Leader主线程都会阻塞在该方法上,接收follower响应的ACKEPOCH包
             }
-            peerLastZxid = ss.getLastZxid();
+            peerLastZxid = ss.getLastZxid();// follower的最大 zxid
             
             /* the default to send to the follower.默认发送给FOLLOWER的是SNAP包 */
             int packetToSend = Leader.SNAP;
@@ -409,7 +409,7 @@ public class LearnerHandler extends ZooKeeperThread {
                     // Follower is already sync with us, send empty diff. follower已经和leader同步了,发送空的 DIFF包
                     LOG.info("leader and follower are in sync, zxid=0x{}",
                             Long.toHexString(peerLastZxid));
-                    packetToSend = Leader.DIFF;
+                    packetToSend = Leader.DIFF;// 发送空的 DIFF包
                     zxidToSend = peerLastZxid;
                 } else if (proposals.size() != 0) {// 有事务日志
                     LOG.debug("proposal size is {}", proposals.size());

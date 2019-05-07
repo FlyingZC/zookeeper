@@ -26,18 +26,18 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+/** 定时任务 清理过期的 snapshot和 事务日志
  * This class manages the cleanup of snapshots and corresponding transaction
  * logs by scheduling the auto purge task with the specified
- * 'autopurge.purgeInterval'. It keeps the most recent
+ * 'autopurge.purgeInterval'. It keeps the most recent 历史文件自动清理的频率.单位为小时,默认值为0,表示不开启定时清理功能
  * 'autopurge.snapRetainCount' number of snapshots and corresponding transaction
- * logs.
+ * logs.配置至少需要保留的快照文件数量和对应的事务日志文件,必须大于等于3,若小于3会被调整到3
  */
 public class DatadirCleanupManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(DatadirCleanupManager.class);
 
-    /**
+    /** 清理任务的状态
      * Status of the dataDir purge task
      */
     public enum PurgeTaskStatus {
@@ -45,13 +45,13 @@ public class DatadirCleanupManager {
     }
 
     private PurgeTaskStatus purgeTaskStatus = PurgeTaskStatus.NOT_STARTED;
-
+    /**快照目录*/
     private final String snapDir;
-
+    /**事务日志目录*/
     private final String dataLogDir;
-
+    /**快照清理后保留数目*/
     private final int snapRetainCount;
-
+    /**清理间隔*/
     private final int purgeInterval;
 
     private Timer timer;
@@ -97,31 +97,31 @@ public class DatadirCleanupManager {
             return;
         }
         // Don't schedule the purge task with zero or negative purge interval.
-        if (purgeInterval <= 0) {
+        if (purgeInterval <= 0) {// purgeInterval小于等于0,表示不开启定时清理功能
             LOG.info("Purge task is not scheduled.");
             return;
         }
 
         timer = new Timer("PurgeTask", true);
         TimerTask task = new PurgeTask(dataLogDir, snapDir, snapRetainCount);
-        timer.scheduleAtFixedRate(task, 0, TimeUnit.HOURS.toMillis(purgeInterval));
+        timer.scheduleAtFixedRate(task, 0, TimeUnit.HOURS.toMillis(purgeInterval));// purgeInterval清理间隔单位是小时
 
-        purgeTaskStatus = PurgeTaskStatus.STARTED;
+        purgeTaskStatus = PurgeTaskStatus.STARTED;// 清理任务状态 标识为 已开始
     }
 
-    /**
+    /** 停掉清理任务
      * Shutdown the purge task.
      */
     public void shutdown() {
         if (PurgeTaskStatus.STARTED == purgeTaskStatus) {
             LOG.info("Shutting down purge task.");
             timer.cancel();
-            purgeTaskStatus = PurgeTaskStatus.COMPLETED;
+            purgeTaskStatus = PurgeTaskStatus.COMPLETED;// 状态由已开始 调整为 已完成
         } else {
             LOG.warn("Purge task not started. Ignoring shutdown!");
         }
     }
-
+    /**清理任务*/
     static class PurgeTask extends TimerTask {
         private String logsDir;
         private String snapsDir;

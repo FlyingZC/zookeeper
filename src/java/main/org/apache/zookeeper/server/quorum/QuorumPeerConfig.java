@@ -73,7 +73,7 @@ public class QuorumPeerConfig {
     protected HashMap<Long, Long> serverGroup = new HashMap<Long, Long>();
     protected int numGroups = 0;
     protected QuorumVerifier quorumVerifier;
-    protected int snapRetainCount = 3;
+    protected int snapRetainCount = 3;// 清理后快照保留数量
     protected int purgeInterval = 0;
     protected boolean syncEnabled = true;
 
@@ -88,7 +88,7 @@ public class QuorumPeerConfig {
     protected String quorumServerLoginContext = QuorumAuth.QUORUM_SERVER_SASL_LOGIN_CONTEXT_DFAULT_VALUE;
     protected int quorumCnxnThreadsSize;
 
-    /**
+    /** 最小快照保留计数
      * Minimum snapshot retain count.
      * @see org.apache.zookeeper.server.PurgeTxnLog#purge(File, File, int)
      */
@@ -300,7 +300,7 @@ public class QuorumPeerConfig {
         // Reset to MIN_SNAP_RETAIN_COUNT if invalid (less than 3)
         // PurgeTxnLog.purge(File, File, int) will not allow to purge less
         // than 3.
-        if (snapRetainCount < MIN_SNAP_RETAIN_COUNT) {
+        if (snapRetainCount < MIN_SNAP_RETAIN_COUNT) {// snapRetainCount配置必须大于等于 3
             LOG.warn("Invalid autopurge.snapRetainCount: " + snapRetainCount
                     + ". Defaulting to " + MIN_SNAP_RETAIN_COUNT);
             snapRetainCount = MIN_SNAP_RETAIN_COUNT;

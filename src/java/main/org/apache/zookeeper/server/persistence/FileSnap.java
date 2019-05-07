@@ -78,7 +78,7 @@ public class FileSnap implements SnapShot {
         }
         File snap = null;
         boolean foundValid = false; // 默认为不合法
-        for (int i = 0; i < snapList.size(); i++) {
+        for (int i = 0; i < snapList.size(); i++) {// 从最新的 snapshot开始遍历
             snap = snapList.get(i);
             InputStream snapIS = null;
             CheckedInputStream crcIn = null;
@@ -94,8 +94,8 @@ public class FileSnap implements SnapShot {
                     throw new IOException("CRC corruption in snapshot :  " + snap);
                 }
                 foundValid = true;// 合法
-                break;// 跳出循环
-            } catch(IOException e) {
+                break;// 找到一个最新的合法的 snapshot文件就跳出循环
+            } catch(IOException e) {// 捕获抛出的异常,继续循环找合法的 snapshot
                 LOG.warn("problem reading snap file " + snap, e);
             } finally {
                 if (snapIS != null) 
@@ -155,7 +155,7 @@ public class FileSnap implements SnapShot {
      * @throws IOException
      */
     private List<File> findNValidSnapshots(int n) throws IOException {
-        List<File> files = Util.sortDataDir(snapDir.listFiles(), SNAPSHOT_FILE_PREFIX, false);// dataDir目录下以snapshot开头的是快照文件
+        List<File> files = Util.sortDataDir(snapDir.listFiles(), SNAPSHOT_FILE_PREFIX, false);// dataDir目录下以snapshot开头的是快照文件,降序排序
         int count = 0;
         List<File> list = new ArrayList<File>();
         for (File f : files) {
@@ -177,7 +177,7 @@ public class FileSnap implements SnapShot {
         return list;
     }
 
-    /**
+    /** 返回最新的 n个快照(最新的排在list的最前面),不校验快照是否可用
      * find the last n snapshots. this does not have
      * any checks if the snapshot might be valid or not
      * @param the number of most recent snapshots
@@ -185,13 +185,13 @@ public class FileSnap implements SnapShot {
      * @throws IOException
      */
     public List<File> findNRecentSnapshots(int n) throws IOException {
-        List<File> files = Util.sortDataDir(snapDir.listFiles(), SNAPSHOT_FILE_PREFIX, false);
+        List<File> files = Util.sortDataDir(snapDir.listFiles(), SNAPSHOT_FILE_PREFIX, false);// 所有快照降序排
         int count = 0;
-        List<File> list = new ArrayList<File>();
+        List<File> list = new ArrayList<File>();// 用于返回n个最新的快照
         for (File f: files) {
             if (count == n)
                 break;
-            if (Util.getZxidFromName(f.getName(), SNAPSHOT_FILE_PREFIX) != -1) {
+            if (Util.getZxidFromName(f.getName(), SNAPSHOT_FILE_PREFIX) != -1) {// 通过文件名判断是快照
                 count++;
                 list.add(f);
             }

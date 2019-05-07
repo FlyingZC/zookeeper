@@ -101,7 +101,7 @@ public class QuorumPeerMain {
     {
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
-            config.parse(args[0]);// 1.通过QuorumPeerConfig.parse(),解析配置文件
+            config.parse(args[0]);// 1.通过QuorumPeerConfig.parse(),解析配置文件. args[0]为 zoo.cfg配置文件地址
         }
 
         // Start and schedule the the purge task.2.启动定时清理服务任务,DatadirCleanupManager.start()用来清除过期的txtLog和snapshot文件
@@ -150,7 +150,7 @@ public class QuorumPeerMain {
           quorumPeer.setClientPortAddress(config.getClientPortAddress());
           quorumPeer.setMinSessionTimeout(config.getMinSessionTimeout());
           quorumPeer.setMaxSessionTimeout(config.getMaxSessionTimeout());
-          quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
+          quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));// 创建 ZKDataBase
           quorumPeer.setLearnerType(config.getPeerType());
           quorumPeer.setSyncEnabled(config.getSyncEnabled());
 
@@ -168,7 +168,7 @@ public class QuorumPeerMain {
           quorumPeer.initialize();
           // 启动auorumPeer
           quorumPeer.start();
-          quorumPeer.join();
+          quorumPeer.join();// 等待上一行的 quorumPeer线程逻辑执行完毕
       } catch (InterruptedException e) {
           // warn, but generally this is ok
           LOG.warn("Quorum Peer interrupted", e);

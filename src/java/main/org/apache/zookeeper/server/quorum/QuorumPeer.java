@@ -640,7 +640,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     private void loadDataBase() {
         File updating = new File(getTxnFactory().getSnapDir(),
-                                 UPDATING_EPOCH_FILENAME);
+                                 UPDATING_EPOCH_FILENAME);// updatingEpoch文件
 		try {
             zkDb.loadDataBase();// 启动时先从磁盘->内存数据库中恢复数据
 

@@ -60,7 +60,7 @@ public class FileTxnSnapLog {
     
     private static final Logger LOG = LoggerFactory.getLogger(FileTxnSnapLog.class);
     
-    /** 接收事务应用过程中的回调，在Zookeeper数据恢复后期，会有事务修正过程，此过程会回调PlayBackListener来进行对应的数据修正
+    /** 接收事务应用过程中的回调，在Zookeeper数据恢复后期，会有事务修正过程，此过程会回调PlayBackListener来进行对应的数据修正.每当有一条事务日志应用到内存数据库后,就会调用这个监听器
      * This listener helps
      * the external apis calling
      * restore to gather information
@@ -286,7 +286,7 @@ public class FileTxnSnapLog {
         return txnLog.getLastLoggedZxid();
     }
 
-    /**
+    /** 将 datatree和 sessions保存到 snapshot
      * save the datatree and the sessions into a snapshot
      * @param dataTree the datatree to be serialized onto disk
      * @param sessionsWithTimeouts the sesssion timeouts to be
@@ -354,7 +354,7 @@ public class FileTxnSnapLog {
         return snaplog.findNRecentSnapshots(n);
     }
 
-    /**
+    /** 获取可能包含比给定 zxid更新的事务的事务日志文件。这包括 1.起始 zxid大于给定zxid的日志，以及 2.起始zxid小于给定zxid的最新事务日志。后一个日志文件可能包含超出给定zxid的事务。
      * get the snapshot logs which may contain transactions newer than the given zxid.
      * This includes logs with starting zxid greater than given zxid, as well as the
      * newest transaction log with starting zxid less than given zxid.  The latter log
@@ -367,7 +367,7 @@ public class FileTxnSnapLog {
         return FileTxnLog.getLogFiles(dataDir.listFiles(), zxid);
     }
 
-    /**
+    /** 事务日志写入
      * append the request to the transaction logs
      * @param si the request to be appended
      * returns true iff something appended, otw false 
