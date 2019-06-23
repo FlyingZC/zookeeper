@@ -1,36 +1,15 @@
-For the latest information about ZooKeeper, please visit our website at:
+整理之前 zk 代码阅读的部分笔记
 
-   http://zookeeper.apache.org/
+- [zk idea 代码阅读环境搭建](notes/zk01_build.md)
 
-and our wiki, at:
+- [zk 服务启动](notes/zk02_start.md)
 
-   https://cwiki.apache.org/confluence/display/ZOOKEEPER
+- [leader 选举](notes/zk03_vote.md)
 
-Full documentation for this release can also be found in docs/index.html
+- [选举完成后 follower 与 leader 数据同步](notes/zk04_sync.md)
 
----------------------------
-Packaging/release artifacts
+- [processor链 和 事务请求处理](notes/zk05_processor.md)
 
-The release artifact contains the following jar file at the toplevel:
+- [snapshot 和 txnlog](notes/zk06_snapshot_txnlog.md)
 
-zookeeper-<version>.jar         - legacy jar file which contains all classes
-                                  and source files. Prior to version 3.3.0 this
-                                  was the only jar file available. It has the 
-                                  benefit of having the source included (for
-                                  debugging purposes) however is also larger as
-                                  a result
-
-The release artifact contains the following jar files in "dist-maven" directory:
-
-zookeeper-<version>.jar         - bin (binary) jar - contains only class (*.class) files
-zookeeper-<version>-sources.jar - contains only src (*.java) files
-zookeeper-<version>-javadoc.jar - contains only javadoc files
-
-These bin/src/javadoc jars were added specifically to support Maven/Ivy which have 
-the ability to pull these down automatically as part of your build process. 
-The content of the legacy jar and the bin+sources jar are the same.
-
-As of version 3.3.0 bin/sources/javadoc jars contained in dist-maven directory
-are deployed to the Apache Maven repository after the release has been accepted
-by Apache:
-  http://people.apache.org/repo/m2-ibiblio-rsync-repository/
+- [zk 应用](notes/zk07_useage.md)
