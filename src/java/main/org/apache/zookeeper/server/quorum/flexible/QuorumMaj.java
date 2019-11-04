@@ -53,7 +53,7 @@ public class QuorumMaj implements QuorumVerifier {
         return (long) 1;
     }
     
-    /**
+    /** 验证所给集合大小是否超过半数
      * Verifies if a set is a majority.
      */
     public boolean containsQuorum(Set<Long> set){

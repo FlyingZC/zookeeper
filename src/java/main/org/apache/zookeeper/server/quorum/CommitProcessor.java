@@ -38,18 +38,18 @@ import org.apache.zookeeper.server.ZooKeeperServerListener;
 public class CommitProcessor extends ZooKeeperCriticalThread implements RequestProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(CommitProcessor.class);
 
-    /** 请求队列
+    /** 请求队列(不一定是事务请求).queuedRequests 中的请求是在 proposalRequestProcessor.processRequest()中加入进来的.这些请求当时还没有进行 proposal和 commit包的处理
      * Requests that we are holding until the commit comes in.
      */
     LinkedList<Request> queuedRequests = new LinkedList<Request>();
 
-    /**
+    /** committedRequests中的请求时在执行完 proposal和 commit包 后加入进来的 (需要被应用到内存数据库的 事务请求)
      * Requests that have been committed.
      */
     LinkedList<Request> committedRequests = new LinkedList<Request>();
 
     RequestProcessor nextProcessor;
-    ArrayList<Request> toProcess = new ArrayList<Request>();// 待处理的队列
+    ArrayList<Request> toProcess = new ArrayList<Request>();// 所有非事务请求添加到 toProcess队列,用于交给下个processor处理
 
     /** 对于leader是false,对于learner是true.因为learner端sync请求需要等待leader回复,而leader端本身则不需要
      * This flag indicates whether we need to wait for a response to come back from the
@@ -70,24 +70,24 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
     @Override
     public void run() {
         try {
-            Request nextPending = null;// 下一个等待处理的请求
+            Request nextPending = null;// 下一个等待处理的事务请求
             while (!finished) {
                 int len = toProcess.size();
                 for (int i = 0; i < len; i++) {//  遍历 toProcess队列(非事务请求或者已经提交的事务请求),交给下一个处理器处理，清空队列
                     nextProcessor.processRequest(toProcess.get(i));
                 }
                 toProcess.clear();
-                synchronized (this) {
+                synchronized (this) {// 同步监视器是当前类的对象
                     if ((queuedRequests.size() == 0 || nextPending != null)
-                            && committedRequests.size() == 0) {// [在请求队列 queuedRequests remove干净 或 找到了事务请求 nextPending的情况下] 且 没有提交的请求
-                        wait();// 若没有提交的请求,就等待
+                            && committedRequests.size() == 0) {// 1.请求队列为空 且 commit队列也为空; 2.[请求队列不为空但是有标记要处理的请求] 且 commit队列为空
+                        wait();// 等待 commit请求进来
                         continue;
                     }
                     // First check and see if the commit came in for the pending
                     // request
                     if ((queuedRequests.size() == 0 || nextPending != null)
-                            && committedRequests.size() > 0) {// 在请求队列 queuedRequests remove干净 或 找到了事务请求 nextPending的情况下. 若有提交的请求
-                        Request r = committedRequests.remove();// 取出 提交的请求
+                            && committedRequests.size() > 0) {// 有 commit请求进来. 1.请求队列为空 且 commit队列不为空; 2.[请求队列不为空但是有 标记要处理的请求] 且 commit队列不为空
+                        Request r = committedRequests.remove();// 取出 commit请求
                         /*
                          * We match with nextPending so that we can move to the
                          * next request when it is committed. We also want to
@@ -102,7 +102,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                             nextPending.hdr = r.hdr;
                             nextPending.txn = r.txn;
                             nextPending.zxid = r.zxid;
-                            toProcess.add(nextPending);//  匹配的话,进入toProcess队列,nextPending置空
+                            toProcess.add(nextPending);// 匹配的话,进入toProcess队列,nextPending置空
                             nextPending = null;
                         } else {
                             // this request came from someone else so just
@@ -117,8 +117,8 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
                 if (nextPending != null) {// 若 nextPending非空，就不用再去遍历请求队列，找到下一个事务请求(不执行下面的逻辑)
                     continue;
                 }
-
-                synchronized (this) {
+                // 从 queuedRequests 中找到第一个事务请求给 nextPending 赋值
+                synchronized (this) {// 加锁
                     // Process the next requests in the queuedRequests
                     while (nextPending == null && queuedRequests.size() > 0) {// 遍历取queuedRequests中的request,非事务请求添加到toProcess中,事务请求赋值给nextPending(退出循环)
                         Request request = queuedRequests.remove();
@@ -167,7 +167,7 @@ public class CommitProcessor extends ZooKeeperCriticalThread implements RequestP
             notifyAll();
         }
     }
-
+    // leader 和 所有 follower 在 ProposalRequestProcessor 中 都会调用该方法
     synchronized public void processRequest(Request request) {
         // request.addRQRec(">commit");
         if (LOG.isDebugEnabled()) {

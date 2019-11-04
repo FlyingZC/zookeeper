@@ -215,7 +215,7 @@ public class FileTxnSnapLog {
                    throw new IOException("Failed to process transaction type: " +
                          hdr.getType() + " error: " + e.getMessage(), e);
                 }
-                listener.onTxnLoaded(hdr, itr.getTxn());
+                listener.onTxnLoaded(hdr, itr.getTxn()); // 每当成功将一条事务日志应用到内存数据库中后,会回调 PlayBackListener 监听器.它会将这些刚被应用到内存数据库中的事务转存到 ZKDatabase.committedLog 中,以便后面 数据同步使用.
                 if (!itr.next()) 
                     break;
             }

@@ -101,7 +101,7 @@ public class ZooKeeper {
     public ZooKeeperSaslClient getSaslClient() {
         return cnxn.zooKeeperSaslClient;
     }
-
+    // 创建 ZKWatchManager 对象
     private final ZKWatchManager watchManager = new ZKWatchManager();
 
     List<String> getDataWatches() {

@@ -120,16 +120,16 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
 
             // we do this in an attempt to ensure that not all of the servers
             // in the ensemble take a snapshot at the same time
-            setRandRoll(r.nextInt(snapCount/2));// 随机数用于防止所有servers在同一时刻进行snapshot操作
+            setRandRoll(r.nextInt(snapCount/2));// 设置滚动日志的随机数,该随机数用于防止所有servers在同一时刻进行snapshot操作
             while (true) {
                 Request si = null;
                 if (toFlush.isEmpty()) {// 没有需要刷新到磁盘的请求
                     si = queuedRequests.take();// 从请求队列中取出一个请求，若队列为空会阻塞住
                 } else {// 有需要刷新到磁盘的请求
                     si = queuedRequests.poll();// 从请求队列中取出一个请求，若队列为空，则返回空，不会阻塞
-                    if (si == null) {// 取出的请求为空(说明队列取完了 要刷盘?)
+                    if (si == null) {// 取出的请求为空(说明队列取完了 将所有要刷盘的请求队列刷盘)
                         flush(toFlush);// 刷新到磁盘
-                        continue;
+                        continue;// 不走后面的逻辑,进行下一次 while循环
                     }
                 }
                 if (si == requestOfDeath) {
@@ -138,13 +138,13 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements Req
                 if (si != null) {
                     // track the number of records written to the log
                     if (zks.getZKDatabase().append(si)) {// 将请求添加至日志文件，只有事务性请求才会返回true
-                        logCount++;
+                        logCount++;// 事务日志写入计数 加 1
                         if (logCount > (snapCount / 2 + randRoll)) {// 事务日志记录到一定次数后,进行 滚动日志 和 snapshot
                             setRandRoll(r.nextInt(snapCount/2));// 重置 滚动日志 随机数
                             // roll the log 滚动日志,创建新的日志文件
                             zks.getZKDatabase().rollLog();
                             // take a snapshot
-                            if (snapInProcess != null && snapInProcess.isAlive()) {// 正在进行快照
+                            if (snapInProcess != null && snapInProcess.isAlive()) {// 正在进行快照,就不处理了,那就等下一次 while循环再看看吧
                                 LOG.warn("Too busy to snap, skipping");
                             } else {// 未启动快照处理线程(每次都新起一个线程进行 snapshot吗 ?)
                                 snapInProcess = new ZooKeeperThread("Snapshot Thread") {

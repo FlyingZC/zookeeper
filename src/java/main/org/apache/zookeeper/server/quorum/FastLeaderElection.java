@@ -634,7 +634,7 @@ public class FastLeaderElection implements Election {
     protected boolean termPredicate(
             HashMap<Long, Vote> votes,// 本轮选举中收到的所有选票
             Vote vote) {// 选出来的投票
-
+        // 保存 和 vote 投票一样的 serverId
         HashSet<Long> set = new HashSet<Long>();
 
         /*
@@ -642,8 +642,8 @@ public class FastLeaderElection implements Election {
          * different zxids for a server depending on timing.
          */
         for (Map.Entry<Long,Vote> entry : votes.entrySet()) {
-            if (vote.equals(entry.getValue())){
-                set.add(entry.getKey());// 更新votes中的这个vote
+            if (vote.equals(entry.getValue())){ // 投票一样
+                set.add(entry.getKey());
             }
         }
 

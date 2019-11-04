@@ -554,7 +554,7 @@ public class Leader {
         isShutdown = true;
     }
 
-    /**
+    /** 处理 proposal的 ack
      * Keep a count of acks that are received by the leader for a particular
      * proposal
      * 
@@ -596,14 +596,14 @@ public class Leader {
             // The proposal has already been committed
             return;
         }
-        Proposal p = outstandingProposals.get(zxid);// 根据zxid取出proposal
+        Proposal p = outstandingProposals.get(zxid);// 根据 zxid取出 proposal
         if (p == null) {
             LOG.warn("Trying to commit future proposal: zxid 0x{} from {}",
                     Long.toHexString(zxid), followerAddr);
             return;
         }
         
-        p.ackSet.add(sid);// 保存follower发来的ack的sid
+        p.ackSet.add(sid);// 保存 follower发来的 ack的 sid
         if (LOG.isDebugEnabled()) {
             LOG.debug("Count for zxid: 0x{} is {}",
                     Long.toHexString(zxid), p.ackSet.size());
@@ -622,9 +622,9 @@ public class Leader {
             if (p.request == null) {
                 LOG.warn("Going to commmit null request for proposal: {}", p);
             }
-            commit(zxid);// 创建Leader.COMMIT包并发给所有quorum
+            commit(zxid);// 创建 Leader.COMMIT 包并发给所有 follower. follower 收到后 会走自己的 commit 逻辑.
             inform(p);// 创建Leader.INFORM包,发送给所有observers
-            zk.commitProcessor.commit(p.request);// commit
+            zk.commitProcessor.commit(p.request);// leader 自己的 commit 逻辑
             if(pendingSyncs.containsKey(zxid)){
                 for(LearnerSyncRequest r: pendingSyncs.remove(zxid)) {
                     sendSync(r);
@@ -774,7 +774,7 @@ public class Leader {
         }
         byte[] data = SerializeUtils.serializeRequest(request);// 序列化请求
         proposalStats.setLastProposalSize(data.length);
-        QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid, data, null);
+        QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid, data, null); // 创建 PROPOSAL 包
         
         Proposal p = new Proposal();
         p.packet = pp;
@@ -786,7 +786,7 @@ public class Leader {
 
             lastProposed = p.packet.getZxid();
             outstandingProposals.put(lastProposed, p);
-            sendPacket(pp);
+            sendPacket(pp); // 遍历所有 followers,将 PROPOSAL 包 入各自的队列.
         }
         return p;
     }
@@ -867,20 +867,20 @@ public class Leader {
     }
     // VisibleForTesting
     protected Set<Long> connectingFollowers = new HashSet<Long>();
-    public long getEpochToPropose(long sid, long lastAcceptedEpoch) throws InterruptedException, IOException {
+    public long getEpochToPropose(long sid, long lastAcceptedEpoch) throws InterruptedException, IOException { // follower的 sid 和 epoch
         synchronized(connectingFollowers) {
             if (!waitingForNewEpoch) {
                 return epoch;
             }
             if (lastAcceptedEpoch >= epoch) {
-                epoch = lastAcceptedEpoch+1;
+                epoch = lastAcceptedEpoch+1; // 更新 newEcho
             }
             if (isParticipant(sid)) {
                 connectingFollowers.add(sid);// 将自己加入连接集合中,方便后续判断leader是否有效
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
-            if (connectingFollowers.contains(self.getId()) && 
-                                            verifier.containsQuorum(connectingFollowers)) {// 若有足够多的follower进入，选举有效，则无需等待，并通知其他的等待线程，类似于Barrier
+            if (connectingFollowers.contains(self.getId()) && // 包含 leader
+                                            verifier.containsQuorum(connectingFollowers)) {// 集合中包含 leader 和 过半的 follower.若有足够多的follower进入，选举有效，则无需等待，并通知其他的等待线程，类似于Barrier
                 waitingForNewEpoch = false;
                 self.setAcceptedEpoch(epoch);
                 connectingFollowers.notifyAll();// 唤醒阻塞在connectingFollowers这个同步监视器上的其他线程

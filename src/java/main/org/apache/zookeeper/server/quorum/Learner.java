@@ -296,7 +296,7 @@ public class Learner {
         	} else {
         		throw new IOException("Leaders epoch, " + newEpoch + " is less than accepted epoch, " + self.getAcceptedEpoch());
         	}
-        	QuorumPacket ackNewEpoch = new QuorumPacket(Leader.ACKEPOCH, lastLoggedZxid, epochBytes, null);// 3.给Leader发ACKEPOCH包，告诉Leader这次Follower已经与Leader的zxid同步了
+        	QuorumPacket ackNewEpoch = new QuorumPacket(Leader.ACKEPOCH, lastLoggedZxid, epochBytes, null);// 3.给 Leader发 ACKEPOCH 包，告诉 Leader这次 Follower已经与 Leader的 zxid,epoch 同步了
         	writePacket(ackNewEpoch, true);
             return ZxidUtils.makeZxid(newEpoch, 0);
         } else {

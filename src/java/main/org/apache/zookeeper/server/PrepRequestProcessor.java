@@ -678,7 +678,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
             }
         }
         request.zxid = zks.getZxid();
-        nextProcessor.processRequest(request);
+        nextProcessor.processRequest(request);// 交给下个处理器进行处理
     }
 
     private List<ACL> removeDuplicates(List<ACL> acl) {
