@@ -273,7 +273,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 rsp = new ExistsResponse(stat);
                 break;
             }
-            case OpCode.getData: {
+            case OpCode.getData: { // 获取数据,若有watch会注册
                 lastOp = "GETD";
                 GetDataRequest getDataRequest = new GetDataRequest();
                 ByteBufferInputStream.byteBuffer2Record(request.request,
@@ -287,7 +287,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                         request.authInfo);
                 Stat stat = new Stat();
                 byte b[] = zks.getZKDatabase().getData(getDataRequest.getPath(), stat,
-                        getDataRequest.getWatch() ? cnxn : null);
+                        getDataRequest.getWatch() ? cnxn : null); // 若request中watch为true,则传入cnxn
                 rsp = new GetDataResponse(b, stat);
                 break;
             }

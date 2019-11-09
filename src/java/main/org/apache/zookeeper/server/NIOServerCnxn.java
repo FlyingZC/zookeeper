@@ -1162,9 +1162,9 @@ public class NIOServerCnxn extends ServerCnxn {
         }
 
         // Convert WatchedEvent to a type that can be sent over the wire
-        WatcherEvent e = event.getWrapper();
+        WatcherEvent e = event.getWrapper(); // 将 WatchedEvent 转换成 WatcherEvent,用于网络传输
 
-        sendResponse(h, e, "notification");
+        sendResponse(h, e, "notification"); // 响应
     }
 
     /*

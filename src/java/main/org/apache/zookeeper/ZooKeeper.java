@@ -101,7 +101,7 @@ public class ZooKeeper {
     public ZooKeeperSaslClient getSaslClient() {
         return cnxn.zooKeeperSaslClient;
     }
-    // 创建 ZKWatchManager 对象
+
     private final ZKWatchManager watchManager = new ZKWatchManager();
 
     List<String> getDataWatches() {
@@ -191,10 +191,10 @@ public class ZooKeeper {
                 }
 
                 return result;
-            case NodeDataChanged:
-            case NodeCreated:
+            case NodeDataChanged: // 节点数据变化
+            case NodeCreated: // 节点创建
                 synchronized (dataWatches) {
-                    addTo(dataWatches.remove(clientPath), result);
+                    addTo(dataWatches.remove(clientPath), result); // 从 dataWatches 中移除 clientPath 对应的 watchers,并将 watchers 添加到 result 中
                 }
                 synchronized (existWatches) {
                     addTo(existWatches.remove(clientPath), result);
@@ -252,7 +252,7 @@ public class ZooKeeper {
          * add the watch on the path.
          */
         public void register(int rc) {
-            if (shouldAddWatch(rc)) {
+            if (shouldAddWatch(rc)) { // replyHeader.err == 0
                 Map<String, Set<Watcher>> watches = getWatches(rc);
                 synchronized(watches) {
                     Set<Watcher> watchers = watches.get(clientPath);// 通过路径获取watcher集合
@@ -1205,7 +1205,7 @@ public class ZooKeeper {
         // the watch contains the un-chroot path
         WatchRegistration wcb = null;
         if (watcher != null) {
-            wcb = new DataWatchRegistration(watcher, clientPath);
+            wcb = new DataWatchRegistration(watcher, clientPath); // 注册 watcher
         }
 
         final String serverPath = prependChroot(clientPath);
@@ -1214,9 +1214,9 @@ public class ZooKeeper {
         h.setType(ZooDefs.OpCode.getData);
         GetDataRequest request = new GetDataRequest();
         request.setPath(serverPath);
-        request.setWatch(watcher != null);
+        request.setWatch(watcher != null); // 是否有watcher
         GetDataResponse response = new GetDataResponse();
-        ReplyHeader r = cnxn.submitRequest(h, request, response, wcb);
+        ReplyHeader r = cnxn.submitRequest(h, request, response, wcb); // 发起请求
         if (r.getErr() != 0) {
             throw KeeperException.create(KeeperException.Code.get(r.getErr()),
                     clientPath);

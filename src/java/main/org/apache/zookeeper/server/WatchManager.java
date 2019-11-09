@@ -37,7 +37,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  */
 public class WatchManager {
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
-    // watcher列表
+    // watcher列表,path与watchers的映射
     private final HashMap<String, HashSet<Watcher>> watchTable =
         new HashMap<String, HashSet<Watcher>>();
     // watcher到节点路径的映射
@@ -58,10 +58,10 @@ public class WatchManager {
             // don't waste memory if there are few watches on a node
             // rehash when the 4th entry is added, doubling size thereafter
             // seems like a good compromise
-            list = new HashSet<Watcher>(4);
-            watchTable.put(path, list);
+            list = new HashSet<Watcher>(4); // 默认一个节点上的watchers初始化容量为4,don't waste memory
+            watchTable.put(path, list); // 初始化空的list
         }
-        list.add(watcher);
+        list.add(watcher); // watcher就是当前请求的NIOServerCnxn
 
         HashSet<String> paths = watch2Paths.get(watcher);
         if (paths == null) {
@@ -97,8 +97,8 @@ public class WatchManager {
                 KeeperState.SyncConnected, path);// 根据事件类型、连接状态、节点路径创建WatchedEvent
         HashSet<Watcher> watchers;
         synchronized (this) {
-            watchers = watchTable.remove(path);
-            if (watchers == null || watchers.isEmpty()) {
+            watchers = watchTable.remove(path); // watcher只触发一次就移除
+            if (watchers == null || watchers.isEmpty()) { // 没有注册 watcher
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logTraceMessage(LOG,
                             ZooTrace.EVENT_DELIVERY_TRACE_MASK,
@@ -109,7 +109,7 @@ public class WatchManager {
             for (Watcher w : watchers) {
                 HashSet<String> paths = watch2Paths.get(w);
                 if (paths != null) {
-                    paths.remove(path);
+                    paths.remove(path); // watcher只触发一次就移除
                 }
             }
         }
@@ -117,7 +117,7 @@ public class WatchManager {
             if (supress != null && supress.contains(w)) {
                 continue;
             }
-            w.process(e);// 进行事件处理
+            w.process(e);// 进行watcher事件处理,传入WatchedEvent,此时的w是NioServerCnxn对象
         }
         return watchers;
     }

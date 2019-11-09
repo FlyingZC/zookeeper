@@ -150,6 +150,6 @@ public interface Watcher {
             }           
         }
     }
-
+    /** 定义事件回调的方法 */
     abstract public void process(WatchedEvent event);
 }

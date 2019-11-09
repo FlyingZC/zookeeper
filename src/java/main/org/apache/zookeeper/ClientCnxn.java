@@ -296,8 +296,8 @@ public class ClientCnxn {
 
         public void createBB() {
             try {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(); // 字节数组
+                BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos); // 使用jute对流进行序列化
                 boa.writeInt(-1, "len"); // We'll fill this in later
                 if (requestHeader != null) {
                     requestHeader.serialize(boa, "header");
@@ -763,7 +763,7 @@ public class ClientCnxn {
                 }
                 return;
             }
-            if (replyHdr.getXid() == -1) {
+            if (replyHdr.getXid() == -1) { // Watcher通知
                 // -1 means notification -1表示通知
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got notification sessionid:0x"

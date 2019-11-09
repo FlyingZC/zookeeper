@@ -70,7 +70,7 @@ public class WatchedEvent {
             + " type:" + eventType + " path:" + path;
     }
 
-    /**
+    /** 将 WatchedEvent 对象转换成 WatcherEvent,用于网络传输
      *  Convert WatchedEvent to type that can be sent over network
      */
     public WatcherEvent getWrapper() {

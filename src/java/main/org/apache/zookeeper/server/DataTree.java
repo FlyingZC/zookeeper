@@ -430,9 +430,9 @@ public class DataTree {
             updateCount(lastPrefix, 1);
             updateBytes(lastPrefix, data == null ? 0 : data.length);
         }
-        dataWatches.triggerWatch(path, Event.EventType.NodeCreated);
+        dataWatches.triggerWatch(path, Event.EventType.NodeCreated); // 触发 数据变更 watcher
         childWatches.triggerWatch(parentName.equals("") ? "/" : parentName,
-                Event.EventType.NodeChildrenChanged);
+                Event.EventType.NodeChildrenChanged); // 触发 子节点变更 watcher
         return path;
     }
 
@@ -531,7 +531,7 @@ public class DataTree {
           this.updateBytes(lastPrefix, (data == null ? 0 : data.length)
               - (lastdata == null ? 0 : lastdata.length));
         }
-        dataWatches.triggerWatch(path, EventType.NodeDataChanged);
+        dataWatches.triggerWatch(path, EventType.NodeDataChanged); // setData()时会导致数据变更,若有watcher会触发watcher
         return s;
     }
 
@@ -563,7 +563,7 @@ public class DataTree {
         }
         synchronized (n) {
             n.copyStat(stat);
-            if (watcher != null) {
+            if (watcher != null) { // 若有watcher的话,此时watcher为NIOServerCnxn
                 dataWatches.addWatch(path, watcher);
             }
             return n.data;
@@ -730,7 +730,7 @@ public class DataTree {
                     rc.path = setDataTxn.getPath();
                     rc.stat = setData(setDataTxn.getPath(), setDataTxn
                             .getData(), setDataTxn.getVersion(), header
-                            .getZxid(), header.getTime());
+                            .getZxid(), header.getTime()); // setData(),有watcher时会触发watcher
                     break;
                 case OpCode.setACL:
                     SetACLTxn setACLTxn = (SetACLTxn) txn;
